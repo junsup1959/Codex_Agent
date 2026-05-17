@@ -1,0 +1,5 @@
+interface:
+  display_name: "Orchestrator"
+  short_description: "Main-agent orchestration request stage"
+  default_prompt: "Use $orchestrator to classify the request and emit a scoped orchestration_request."
+

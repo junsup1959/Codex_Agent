@@ -1,0 +1,5 @@
+interface:
+  display_name: "Task Distributor"
+  short_description: "Materialize routed specialist lanes"
+  default_prompt: "Use $task-distributor to spawn, wait, and classify lanes from a validated launch_manifest."
+

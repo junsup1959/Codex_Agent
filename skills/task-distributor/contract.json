@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_name": "task-distributor",
+  "activation_ref": "$task-distributor",
+  "mandatory_for_architecture_required": true,
+  "stage_owner": "task-distributor",
+  "stage_execution_mode": "main_agent_role_pass",
+  "purpose": "Materialize a validated launch_manifest into bounded physical worker or reviewer lanes.",
+  "input_artifacts": ["launch_manifest", "fanout_budget"],
+  "output_artifacts": ["active_passes", "handoff_results"],
+  "forbidden_outputs": ["launch_manifest", "aggregation_packet", "judgment_envelope", "final_output"],
+  "required_evidence": ["spawn_receipt_ref", "wait_agent_evidence", "pass_closure_proof", "mcp_quiescence_snapshot"],
+  "source_docs": ["03-worker-routing.md", "04-aggregation-review.md", "07-contracts-ledgers.md", "09-runtime-orchestration-steps.md"]
+}

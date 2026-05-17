@@ -1,0 +1,4 @@
+interface:
+  display_name: "Reverse Engineering Expert"
+  short_description: "Evidence-driven binary and malware reversing."
+  default_prompt: "Use $reverse-engineering-expert to analyze this binary and produce evidence-backed reverse engineering findings."

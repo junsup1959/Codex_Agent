@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_name": "review-router",
+  "activation_ref": "$review-router",
+  "mandatory_for_architecture_required": true,
+  "stage_owner": "review-router",
+  "stage_execution_mode": "main_agent_role_pass",
+  "purpose": "Route an aggregation_packet into a schema-valid reviewer launch_manifest.",
+  "input_artifacts": ["aggregation_packet", "context_packet_version", "fanout_budget"],
+  "output_artifacts": ["launch_manifest"],
+  "forbidden_outputs": ["active_passes", "judgment_envelope", "final_output"],
+  "required_evidence": ["specialist_catalog_enumeration", "review_coverage_contract", "mcp_quiescence_snapshot", "contract_provenance"],
+  "source_docs": ["04-aggregation-review.md", "06-agent-roster-models.md", "07-contracts-ledgers.md", "09-runtime-orchestration-steps.md"]
+}

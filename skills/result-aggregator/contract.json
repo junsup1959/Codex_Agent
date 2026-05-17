@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_name": "result-aggregator",
+  "activation_ref": "$result-aggregator",
+  "mandatory_for_architecture_required": true,
+  "stage_owner": "aggregator",
+  "stage_execution_mode": "main_agent_role_pass",
+  "purpose": "Reconcile completed worker evidence into one aggregation_packet.",
+  "input_artifacts": ["handoff_results", "active_passes", "context_packet"],
+  "output_artifacts": ["aggregation_packet"],
+  "forbidden_outputs": ["launch_manifest", "judgment_envelope", "final_output"],
+  "required_evidence": ["aggregation_input_bundle", "lane_status_classification", "mcp_quiescence_snapshot", "contract_provenance"],
+  "source_docs": ["04-aggregation-review.md", "07-contracts-ledgers.md", "09-runtime-orchestration-steps.md"]
+}

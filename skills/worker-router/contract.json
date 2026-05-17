@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_name": "worker-router",
+  "activation_ref": "$worker-router",
+  "mandatory_for_architecture_required": true,
+  "stage_owner": "worker-router",
+  "stage_execution_mode": "main_agent_role_pass",
+  "purpose": "Route an execution_plan into a schema-valid worker launch_manifest.",
+  "input_artifacts": ["execution_plan", "context_packet_version", "fanout_budget"],
+  "output_artifacts": ["launch_manifest"],
+  "forbidden_outputs": ["active_passes", "aggregation_packet", "judgment_envelope", "final_output"],
+  "required_evidence": ["specialist_catalog_enumeration", "launch_manifest_schema_gate", "mcp_quiescence_snapshot", "contract_provenance"],
+  "source_docs": ["03-worker-routing.md", "06-agent-roster-models.md", "07-contracts-ledgers.md", "09-runtime-orchestration-steps.md"]
+}

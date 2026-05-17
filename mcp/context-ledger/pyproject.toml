@@ -1,0 +1,20 @@
+[project]
+name = "codex-context-ledger"
+version = "0.1.0"
+description = "SQLite-backed stdio MCP server for Codex run-level orchestration context."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "mcp>=1.27.0",
+]
+
+[project.scripts]
+codex-context-ledger = "context_ledger_mcp.server:main"
+
+[tool.uv]
+package = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
