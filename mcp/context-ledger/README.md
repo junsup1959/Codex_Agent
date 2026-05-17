@@ -22,7 +22,7 @@ uv run codex-context-ledger
 By default the database is created at `data/context-ledger.sqlite`. Override it with:
 
 ```powershell
-$env:CODEX_CONTEXT_LEDGER_DB='C:\Users\junsu\.codex\state\context-ledger.sqlite'
+$env:CODEX_CONTEXT_LEDGER_DB='${CODEX_HOME}\state\context-ledger.sqlite'
 uv run codex-context-ledger
 ```
 

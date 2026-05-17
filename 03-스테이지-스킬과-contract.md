@@ -39,7 +39,7 @@ architecture-required control flow에서 필수인 skill은 다음 7개다.
 각 skill은 보통 다음 구조를 가진다.
 
 ```text
-C:\Users\junsu\.codex\skills\<skill-name>\
+${CODEX_HOME}\skills\<skill-name>\
   SKILL.md
   contract.json
   agents\openai.yaml
@@ -102,7 +102,7 @@ Contract Gate에서 확인할 항목:
 
 ### `$worker-router`
 
-`execution_plan`을 worker `launch_manifest`로 변환한다. 이때 specialist list gate가 핵심이다. 반드시 `C:\Users\junsu\.codex\agents\<category>\*.toml` catalog를 기준으로 concrete role을 선택한다.
+`execution_plan`을 worker `launch_manifest`로 변환한다. 이때 specialist list gate가 핵심이다. 반드시 `${CODEX_HOME}\agents\<category>\*.toml` catalog를 기준으로 concrete role을 선택한다.
 
 중요한 금지:
 
