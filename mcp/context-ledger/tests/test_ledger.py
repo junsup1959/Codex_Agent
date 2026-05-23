@@ -1,9 +1,16 @@
 from __future__ import annotations
 
 import unittest
+import ast
+from pathlib import Path
 
 from context_ledger_mcp.ledger import ContextLedger
-from context_ledger_mcp.validation import validate_stage_packet, validate_tool_sequence
+from context_ledger_mcp.validation import (
+    REQUIRED_TOOL_SEQUENCE,
+    validate_stage_completion,
+    validate_stage_packet,
+    validate_tool_sequence,
+)
 
 
 class ContextLedgerTests(unittest.TestCase):
@@ -146,6 +153,143 @@ class ContextLedgerTests(unittest.TestCase):
                 result = validate_stage_packet(stage_name, packet, current_revision=4)
                 self.assertTrue(result["valid"], result)
 
+    def test_schema_only_allows_empty_materialized_handoffs(self):
+        worker_packet = {
+            "stage_name": "worker",
+            "context_packet_version": 1,
+            "consumed_context_revision": 4,
+            "context_delta": {"approved_facts": ["worker"]},
+            "new_artifact_refs": ["artifact:worker"],
+            "new_evidence_refs": ["evidence:worker"],
+            "stage_pass_ref": "stage_pass:worker:1",
+            "next_owner": "review-distributor",
+            "worker_handoff_results": [],
+        }
+        review_packet = {
+            "stage_name": "review",
+            "context_packet_version": 1,
+            "consumed_context_revision": 4,
+            "context_delta": {"approved_facts": ["review"]},
+            "new_artifact_refs": ["artifact:review"],
+            "new_evidence_refs": ["evidence:review"],
+            "stage_pass_ref": "stage_pass:review:1",
+            "next_owner": "feedbackgate",
+            "review_handoff_results": [],
+        }
+
+        self.assertTrue(validate_stage_packet("worker", worker_packet, current_revision=4)["valid"])
+        self.assertTrue(validate_stage_packet("review", review_packet, current_revision=4)["valid"])
+
+    def test_completion_required_rejects_empty_materialized_handoffs(self):
+        worker_packet = {"stage_name": "worker", "worker_handoff_results": []}
+        review_packet = {"stage_name": "review", "review_handoff_results": []}
+
+        worker_result = validate_stage_completion("worker", worker_packet)
+        review_result = validate_stage_completion("review", review_packet)
+
+        self.assertFalse(worker_result["valid"])
+        self.assertEqual(worker_result["errors"][0]["code"], "completion.worker_lanes_missing")
+        self.assertFalse(review_result["valid"])
+        self.assertEqual(review_result["errors"][0]["code"], "completion.review_lanes_missing")
+
+    def test_completion_required_accepts_classified_empty_lanes(self):
+        worker_result = validate_stage_completion(
+            "worker",
+            {
+                "stage_name": "worker",
+                "worker_handoff_results": [],
+                "missing_lane_classifications": [{"lane_id": "worker-1", "reason": "thread_limit_reached"}],
+            },
+        )
+        review_result = validate_stage_completion(
+            "review",
+            {
+                "stage_name": "review",
+                "review_handoff_results": [],
+                "review_waivers": [{"lane_id": "review-1", "reason": "covered_by_policy"}],
+            },
+        )
+
+        self.assertTrue(worker_result["valid"], worker_result)
+        self.assertTrue(review_result["valid"], review_result)
+
+    def test_completion_required_rejects_malformed_classifications_and_waivers(self):
+        worker_result = validate_stage_completion(
+            "worker",
+            {
+                "stage_name": "worker",
+                "worker_handoff_results": [],
+                "missing_lane_classifications": [{"lane_id": "worker-1"}],
+            },
+        )
+        review_result = validate_stage_completion(
+            "review",
+            {
+                "stage_name": "review",
+                "review_handoff_results": [],
+                "review_waivers": ["not-an-object"],
+            },
+        )
+
+        self.assertFalse(worker_result["valid"])
+        self.assertEqual(
+            {item["code"] for item in worker_result["errors"]},
+            {
+                "completion.missing_lane_classifications.reason",
+                "completion.worker_lanes_missing",
+            },
+        )
+        self.assertFalse(review_result["valid"])
+        self.assertEqual(
+            {item["code"] for item in review_result["errors"]},
+            {
+                "completion.review_waivers.item_shape",
+                "completion.review_lanes_missing",
+            },
+        )
+
+    def test_completion_required_blocks_feedbackgate_final_without_evidence(self):
+        result = validate_stage_completion(
+            "feedbackgate",
+            {
+                "stage_name": "feedbackgate",
+                "judgment_envelope": {"feedback_required": False},
+            },
+        )
+
+        self.assertFalse(result["valid"])
+        self.assertEqual(
+            {item["code"] for item in result["errors"]},
+            {
+                "completion.feedback_gate_evidence_missing",
+                "completion.review_inputs_missing",
+                "completion.stage_passes_missing",
+                "completion.active_passes_missing",
+            },
+        )
+
+    def test_completion_required_rejects_malformed_feedbackgate_waivers(self):
+        result = validate_stage_completion(
+            "feedbackgate",
+            {
+                "stage_name": "feedbackgate",
+                "judgment_envelope": {"feedback_required": False},
+                "feedback_gate_evidence": {"review_inputs_present": True},
+                "review_waivers": [{"reason": "covered elsewhere"}],
+                "stage_passes": ["stage_pass:review:1"],
+                "active_passes": ["stage_pass:worker:1"],
+            },
+        )
+
+        self.assertFalse(result["valid"])
+        self.assertEqual(
+            {item["code"] for item in result["errors"]},
+            {
+                "completion.review_waivers.lane_id",
+                "completion.review_inputs_missing",
+            },
+        )
+
     def test_worker_handoff_requires_spawn_and_wait_evidence(self):
         valid_packet = {
             "stage_name": "worker",
@@ -162,6 +306,7 @@ class ContextLedgerTests(unittest.TestCase):
                     "status": "returned",
                     "spawn_receipt_ref": "spawn:worker-1",
                     "agent_id": "agent-1",
+                    "wait_handle": "wait:worker-1",
                     "wait_agent_evidence": {"status": "completed"},
                 }
             ],
@@ -176,7 +321,7 @@ class ContextLedgerTests(unittest.TestCase):
         self.assertFalse(invalid["valid"])
         self.assertEqual(
             {item["code"] for item in invalid["errors"]},
-            {"handoff.spawn_receipt_ref", "handoff.agent_id", "handoff.wait_agent_evidence"},
+            {"handoff.spawn_receipt_ref", "handoff.agent_id", "handoff.wait_handle", "handoff.wait_agent_evidence"},
         )
 
     def test_validates_tool_sequence(self):
@@ -193,6 +338,37 @@ class ContextLedgerTests(unittest.TestCase):
         self.assertTrue(valid["valid"], valid)
 
         invalid = validate_tool_sequence("task-planner", ["read_context_packet", "write_context_packet"])
+        self.assertFalse(invalid["valid"])
+        self.assertEqual(invalid["errors"][0]["code"], "sequence.incomplete_or_out_of_order")
+
+    def test_materialized_stages_require_completion_validation_in_sequence(self):
+        valid = validate_tool_sequence(
+            "worker",
+            [
+                "read_context_packet",
+                "validate_context_revision",
+                "append_stage_pass",
+                "validate_stage_packet",
+                "validate_stage_completion",
+                "write_context_packet",
+                "record_mcp_quiescence",
+                "validate_tool_sequence",
+            ],
+        )
+        self.assertTrue(valid["valid"], valid)
+
+        invalid = validate_tool_sequence(
+            "worker",
+            [
+                "read_context_packet",
+                "validate_context_revision",
+                "append_stage_pass",
+                "validate_stage_packet",
+                "write_context_packet",
+                "record_mcp_quiescence",
+                "validate_tool_sequence",
+            ],
+        )
         self.assertFalse(invalid["valid"])
         self.assertEqual(invalid["errors"][0]["code"], "sequence.incomplete_or_out_of_order")
 
@@ -239,6 +415,29 @@ class ContextLedgerTests(unittest.TestCase):
 
             calls = ledger.list_tool_calls("run-1", "task-planner")
             self.assertEqual([item["tool_name"] for item in calls], ["read_context_packet", "validate_context_revision"])
+
+    def test_required_tool_sequence_is_exposed_by_server(self):
+        server_path = Path(__file__).resolve().parents[1] / "src" / "context_ledger_mcp" / "server.py"
+        tree = ast.parse(server_path.read_text(encoding="utf-8"))
+        server_tools = {
+            node.name
+            for node in tree.body
+            if isinstance(node, ast.FunctionDef)
+            and any(
+                isinstance(decorator, ast.Call)
+                and isinstance(decorator.func, ast.Attribute)
+                and decorator.func.attr == "tool"
+                for decorator in node.decorator_list
+            )
+        }
+        required_tools = {
+            tool_name
+            for required_sequence in REQUIRED_TOOL_SEQUENCE.values()
+            for tool_name in required_sequence
+        }
+
+        self.assertEqual(required_tools - server_tools, set())
+        self.assertIn("validate_stage_completion", server_tools)
 
 
 if __name__ == "__main__":

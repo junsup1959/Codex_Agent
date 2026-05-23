@@ -22,7 +22,7 @@ User-facing shorthand may omit the ledger as `orchestrator -> task-planner -> sp
 - `orchestration_stage_skills_required=true`: force `$orchestrator`, `$context-ledger`, `$task-planner`, `$worker`, `$review-distributor`, `$review`, and `$feedbackgate` in that order.
 - `context_ledger_mcp_required=true`: `$context-ledger` must use localhost `codex-context-ledger` as the run/session source of truth. Do not spawn a physical resident context agent.
 - `context_ledger_barrier_required=true`: every mandatory stage must read and validate the latest ledger revision before acting, then write a context delta and `stage_pass_ref` before handoff.
-- `mcp_tool_sequence_validation_required=true`: every mandatory skill must call its documented `codex-context-ledger` tools in order and require `validate_stage_packet.valid=true` plus `validate_tool_sequence.valid=true`.
+- `mcp_tool_sequence_validation_required=true`: every mandatory skill must call its documented `codex-context-ledger` tools in order and require `validate_stage_packet.valid=true` plus `validate_tool_sequence.valid=true`; `$worker`, `$review`, and `$feedbackgate` also require `validate_stage_completion.valid=true`.
 - `$worker` and `$review` are main-agent skills that materialize physical specialist agents with `spawn_agent`, wait with `wait_agent`, and classify every lane before handoff.
 - Physical parallelism is reserved for specialist workers and specialist reviews selected from `${CODEX_HOME}/agents/<category>/*.toml`.
 - Every spawned child must have `spawn_receipt_ref`, `agent_id` or `submission_id`, `wait_handle`, and later `wait_agent` evidence. `close_agent` is cleanup only.
@@ -43,13 +43,14 @@ User-facing shorthand may omit the ledger as `orchestrator -> task-planner -> sp
 
 ## MCP Runtime Validation
 
-Do not use repository-side scripts as runtime gates. Each mandatory skill must prove its own handoff through `codex-context-ledger` MCP calls, especially `validate_context_revision`, `validate_stage_packet`, and `validate_tool_sequence`.
+Do not use repository-side scripts as runtime gates. Each mandatory skill must prove its own handoff through `codex-context-ledger` MCP calls, especially `validate_context_revision`, `validate_stage_packet`, and `validate_tool_sequence`; completion-bearing stages additionally call `validate_stage_completion`.
 
 ## Local MCP Approval Helper
 
 - Use `scripts/ensure-mcp-tool-approvals.ps1` to keep `MCP_DOCKER` and `codex-context-ledger` tool approvals synchronized in `${CODEX_HOME}/config.toml`.
 - The helper adds missing approval blocks and removes stale approval blocks for managed servers when a tool disappears from the maintained tool manifest.
 - Preferred command: `powershell -ExecutionPolicy Bypass -File .\scripts\ensure-mcp-tool-approvals.ps1`.
+- Before changing the helper's TOML regex logic, run `powershell -ExecutionPolicy Bypass -File .\scripts\ensure-mcp-tool-approvals.ps1 -SelfTest`.
 - Agents without full filesystem access may still use the helper in workspace-safe mode:
   - Check only: `powershell -ExecutionPolicy Bypass -File .\scripts\ensure-mcp-tool-approvals.ps1 -Check`
   - Print updated config: `powershell -ExecutionPolicy Bypass -File .\scripts\ensure-mcp-tool-approvals.ps1 -PrintOnly`

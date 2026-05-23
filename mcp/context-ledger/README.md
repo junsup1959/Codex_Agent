@@ -50,6 +50,7 @@ codex mcp add codex-context-ledger --url http://127.0.0.1:8765/mcp
 - `record_mcp_quiescence`: store MCP cleanup evidence.
 - `validate_context_revision`: check whether a caller has the current revision.
 - `validate_stage_packet`: validate each architecture stage packet through the MCP API.
+- `validate_stage_completion`: validate completion readiness separately from packet shape.
 - `validate_tool_sequence`: validate that the stage called the required MCP tools in order.
 - `query_run_ledger`: return a compact run ledger snapshot.
 - `close_run`: mark a run closed.
@@ -67,3 +68,7 @@ Every mandatory skill calls the MCP tools in this order:
 7. `validate_tool_sequence`
 
 `orchestrator` additionally calls `initialize_run` before reading context. `context-ledger` additionally calls `set_role_pass_readiness` before writing the next packet.
+
+`worker`, `review`, and `feedbackgate` also call `validate_stage_completion` between `validate_stage_packet` and `write_context_packet`; `validate_tool_sequence` requires that call for those stages.
+
+`validate_stage_packet` is a schema and barrier check. Empty worker or review handoff lists can be schema-valid when the packet is still only a minimal stage shape. Use `validate_stage_completion` for final-readiness checks that require worker/review handoffs, well-formed missing-lane classifications, well-formed review waivers, feedback gate evidence, and current pass evidence.
