@@ -99,6 +99,53 @@ class ContextLedgerTests(unittest.TestCase):
         self.assertFalse(stale["valid"])
         self.assertEqual(stale["errors"][0]["code"], "barrier.stale_revision")
 
+    def test_minimal_packets_for_all_mandatory_stages(self):
+        cases = {
+            "orchestrator": {
+                "next_owner": "context-ledger",
+                "orchestration_request": {"scope": "unit"},
+            },
+            "context-ledger": {
+                "next_owner": "task-planner",
+                "context_packet": {"approved_facts": []},
+            },
+            "task-planner": {
+                "next_owner": "worker",
+                "execution_plan": {"lanes": []},
+            },
+            "worker": {
+                "next_owner": "review-distributor",
+                "worker_handoff_results": [],
+            },
+            "review-distributor": {
+                "next_owner": "review",
+                "review_plan": {"lanes": []},
+            },
+            "review": {
+                "next_owner": "feedbackgate",
+                "review_handoff_results": [],
+            },
+            "feedbackgate": {
+                "next_owner": "final",
+                "judgment_envelope": {"feedback_required": False},
+            },
+        }
+
+        for stage_name, stage_fields in cases.items():
+            with self.subTest(stage_name=stage_name):
+                packet = {
+                    "stage_name": stage_name,
+                    "context_packet_version": 1,
+                    "consumed_context_revision": 4,
+                    "context_delta": {"approved_facts": [stage_name]},
+                    "new_artifact_refs": [f"artifact:{stage_name}"],
+                    "new_evidence_refs": [f"evidence:{stage_name}"],
+                    "stage_pass_ref": f"stage_pass:{stage_name}:1",
+                    **stage_fields,
+                }
+                result = validate_stage_packet(stage_name, packet, current_revision=4)
+                self.assertTrue(result["valid"], result)
+
     def test_worker_handoff_requires_spawn_and_wait_evidence(self):
         valid_packet = {
             "stage_name": "worker",
@@ -146,6 +193,38 @@ class ContextLedgerTests(unittest.TestCase):
         self.assertTrue(valid["valid"], valid)
 
         invalid = validate_tool_sequence("task-planner", ["read_context_packet", "write_context_packet"])
+        self.assertFalse(invalid["valid"])
+        self.assertEqual(invalid["errors"][0]["code"], "sequence.incomplete_or_out_of_order")
+
+    def test_context_ledger_sequence_requires_readiness_before_write(self):
+        valid = validate_tool_sequence(
+            "context-ledger",
+            [
+                "read_context_packet",
+                "validate_context_revision",
+                "append_stage_pass",
+                "validate_stage_packet",
+                "set_role_pass_readiness",
+                "write_context_packet",
+                "record_mcp_quiescence",
+                "validate_tool_sequence",
+            ],
+        )
+        self.assertTrue(valid["valid"], valid)
+
+        invalid = validate_tool_sequence(
+            "context-ledger",
+            [
+                "read_context_packet",
+                "validate_context_revision",
+                "append_stage_pass",
+                "validate_stage_packet",
+                "write_context_packet",
+                "set_role_pass_readiness",
+                "record_mcp_quiescence",
+                "validate_tool_sequence",
+            ],
+        )
         self.assertFalse(invalid["valid"])
         self.assertEqual(invalid["errors"][0]["code"], "sequence.incomplete_or_out_of_order")
 

@@ -44,3 +44,14 @@ User-facing shorthand may omit the ledger as `orchestrator -> task-planner -> sp
 ## MCP Runtime Validation
 
 Do not use repository-side scripts as runtime gates. Each mandatory skill must prove its own handoff through `codex-context-ledger` MCP calls, especially `validate_context_revision`, `validate_stage_packet`, and `validate_tool_sequence`.
+
+## Local MCP Approval Helper
+
+- Use `scripts/ensure-mcp-tool-approvals.ps1` to keep `MCP_DOCKER` and `codex-context-ledger` tool approvals synchronized in `${CODEX_HOME}/config.toml`.
+- The helper adds missing approval blocks and removes stale approval blocks for managed servers when a tool disappears from the maintained tool manifest.
+- Preferred command: `powershell -ExecutionPolicy Bypass -File .\scripts\ensure-mcp-tool-approvals.ps1`.
+- Agents without full filesystem access may still use the helper in workspace-safe mode:
+  - Check only: `powershell -ExecutionPolicy Bypass -File .\scripts\ensure-mcp-tool-approvals.ps1 -Check`
+  - Print updated config: `powershell -ExecutionPolicy Bypass -File .\scripts\ensure-mcp-tool-approvals.ps1 -PrintOnly`
+  - Write a workspace-local candidate: `powershell -ExecutionPolicy Bypass -File .\scripts\ensure-mcp-tool-approvals.ps1 -OutputPath .\.codex-generated\config.toml`
+- This helper is not a runtime validation gate. It only prevents repetitive MCP approval prompts by adding explicit `[mcp_servers.<server>.tools.<tool>] approval_mode = "approve"` entries where Codex has no wildcard approval syntax.

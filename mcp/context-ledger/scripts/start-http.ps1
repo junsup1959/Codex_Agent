@@ -3,8 +3,10 @@ $ErrorActionPreference = 'Stop'
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 $env:CODEX_CONTEXT_LEDGER_DB = if ($env:CODEX_CONTEXT_LEDGER_DB) {
   $env:CODEX_CONTEXT_LEDGER_DB
+} elseif ($env:CODEX_HOME) {
+  Join-Path $env:CODEX_HOME 'state\context-ledger.sqlite'
 } else {
-  'C:\Users\junsu\.codex\state\context-ledger.sqlite'
+  Join-Path $HOME '.codex\state\context-ledger.sqlite'
 }
 $env:PYTHONPATH = Join-Path $ProjectRoot 'src'
 
