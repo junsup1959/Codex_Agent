@@ -17,18 +17,20 @@ Call these ledger tools in order with `stage_name="worker"` where accepted.
 4. `append_stage_pass(run_id, stage_name, stage_execution_mode="main_agent_role_pass", evidence, context_revision=<read.context_revision>)`
 5. Build `worker_handoff_results` with `stage_pass_ref="stage_pass:worker:<append.id>"`.
 6. `validate_stage_packet(run_id, stage_name, packet=<stage_packet>)`
-7. `write_context_packet(run_id, packet=<context_delta_applied_packet>, expected_revision=<read.context_revision>, stage_name)`
-8. `record_mcp_quiescence(run_id, stage_name, snapshot)`
-9. `validate_tool_sequence(run_id, stage_name)`
+7. `validate_stage_completion(run_id, stage_name, packet=<stage_packet>)`
+8. `write_context_packet(run_id, packet=<context_delta_applied_packet>, expected_revision=<read.context_revision>, stage_name)`
+9. `record_mcp_quiescence(run_id, stage_name, snapshot)`
+10. `validate_tool_sequence(run_id, stage_name)`
 
-Use `record_artifact_ref` for returned artifacts and `mark_stale` for superseded inputs before step 7.
+Use `record_artifact_ref` for returned artifacts and `mark_stale` for superseded inputs before step 8.
 
 ## Required Return Values
 
 - `validate_context_revision.valid=true`
-- `spawn_receipt_ref`, `agent_id` or `submission_id`, and `wait_agent` evidence for every spawned child
+- `spawn_receipt_ref`, `agent_id` or `submission_id`, `wait_handle`, and `wait_agent` evidence for every spawned child
 - `append.id` converted to `stage_pass_ref`
 - `validate_stage_packet.valid=true`
+- `validate_stage_completion.valid=true`
 - `write.context_revision`
 - `validate_tool_sequence.valid=true`
 

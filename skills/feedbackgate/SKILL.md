@@ -17,9 +17,10 @@ Call these tools in order with `stage_name="feedbackgate"` where accepted.
 4. `append_stage_pass(run_id, stage_name, stage_execution_mode="main_agent_role_pass", evidence, context_revision=<read.context_revision>)`
 5. Build `judgment_envelope` with `stage_pass_ref="stage_pass:feedbackgate:<append.id>"`.
 6. `validate_stage_packet(run_id, stage_name, packet=<stage_packet>)`
-7. `write_context_packet(run_id, packet=<context_delta_applied_packet>, expected_revision=<read.context_revision>, stage_name)`
-8. `record_mcp_quiescence(run_id, stage_name, snapshot)`
-9. `validate_tool_sequence(run_id, stage_name)`
+7. `validate_stage_completion(run_id, stage_name, packet=<stage_packet>)`
+8. `write_context_packet(run_id, packet=<context_delta_applied_packet>, expected_revision=<read.context_revision>, stage_name)`
+9. `record_mcp_quiescence(run_id, stage_name, snapshot)`
+10. `validate_tool_sequence(run_id, stage_name)`
 
 ## Required Return Values
 
@@ -28,6 +29,7 @@ Call these tools in order with `stage_name="feedbackgate"` where accepted.
 - non-empty `feedback_gate_evidence`
 - `append.id` converted to `stage_pass_ref`
 - `validate_stage_packet.valid=true`
+- `validate_stage_completion.valid=true`
 - `write.context_revision`
 - `validate_tool_sequence.valid=true`
 - clean `mcp_quiescence_snapshot`

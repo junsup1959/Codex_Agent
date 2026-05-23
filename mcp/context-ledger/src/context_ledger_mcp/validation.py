@@ -66,6 +66,7 @@ REQUIRED_TOOL_SEQUENCE = {
         "validate_context_revision",
         "append_stage_pass",
         "validate_stage_packet",
+        "validate_stage_completion",
         "write_context_packet",
         "record_mcp_quiescence",
         "validate_tool_sequence",
@@ -84,6 +85,7 @@ REQUIRED_TOOL_SEQUENCE = {
         "validate_context_revision",
         "append_stage_pass",
         "validate_stage_packet",
+        "validate_stage_completion",
         "write_context_packet",
         "record_mcp_quiescence",
         "validate_tool_sequence",
@@ -93,6 +95,7 @@ REQUIRED_TOOL_SEQUENCE = {
         "validate_context_revision",
         "append_stage_pass",
         "validate_stage_packet",
+        "validate_stage_completion",
         "write_context_packet",
         "record_mcp_quiescence",
         "validate_tool_sequence",
@@ -215,6 +218,70 @@ def validate_tool_sequence(stage_name: str, observed_tools: list[str]) -> dict[s
     }
 
 
+def validate_stage_completion(stage_name: str, packet: dict[str, Any]) -> dict[str, Any]:
+    errors: list[dict[str, str]] = []
+
+    def error(code: str, path: str, message: str) -> None:
+        errors.append({"code": code, "path": path, "message": message})
+
+    stage_packet = packet.get("stage_packet", packet)
+    if not isinstance(stage_packet, dict):
+        error("packet.shape", "$", "packet must be an object")
+        stage_packet = {}
+
+    if stage_name == "worker":
+        handoffs = stage_packet.get("worker_handoff_results")
+        missing_lanes = stage_packet.get("missing_lane_classifications")
+        missing_lanes_valid = _validate_lane_reason_items("missing_lane_classifications", missing_lanes, error)
+        if not _non_empty_list(handoffs) and not missing_lanes_valid:
+            error(
+                "completion.worker_lanes_missing",
+                "worker_handoff_results",
+                "worker completion requires at least one handoff result or missing-lane classification",
+            )
+    elif stage_name == "review":
+        handoffs = stage_packet.get("review_handoff_results")
+        waivers = stage_packet.get("review_waivers")
+        waivers_valid = _validate_lane_reason_items("review_waivers", waivers, error)
+        if not _non_empty_list(handoffs) and not waivers_valid:
+            error(
+                "completion.review_lanes_missing",
+                "review_handoff_results",
+                "review completion requires at least one review result or explicit waiver",
+            )
+    elif stage_name == "feedbackgate":
+        judgment = stage_packet.get("judgment_envelope", {})
+        if not isinstance(judgment, dict):
+            error("completion.judgment_shape", "judgment_envelope", "judgment_envelope must be an object")
+            judgment = {}
+        if judgment.get("feedback_required") is False:
+            waivers_valid = _validate_lane_reason_items("review_waivers", stage_packet.get("review_waivers"), error)
+            if not stage_packet.get("feedback_gate_evidence"):
+                error(
+                    "completion.feedback_gate_evidence_missing",
+                    "feedback_gate_evidence",
+                    "final readiness requires feedback gate evidence",
+                )
+            if not (_non_empty_list(stage_packet.get("review_input_refs")) or waivers_valid):
+                error(
+                    "completion.review_inputs_missing",
+                    "review_input_refs",
+                    "final readiness requires reviewer input refs or explicit review waivers",
+                )
+            if not _non_empty_list(stage_packet.get("stage_passes")):
+                error("completion.stage_passes_missing", "stage_passes", "final readiness requires stage pass evidence")
+            if not _non_empty_list(stage_packet.get("active_passes")):
+                error("completion.active_passes_missing", "active_passes", "final readiness requires active pass evidence")
+    elif stage_name not in STAGE_ARTIFACTS:
+        error("stage.unknown", "stage_name", f"unknown stage: {stage_name}")
+
+    return {
+        "valid": not errors,
+        "stage_name": stage_name,
+        "errors": errors,
+    }
+
+
 def _expected_next_owner(stage_name: str, packet: dict[str, Any]) -> str:
     if stage_name == "feedbackgate":
         judgment = packet.get("judgment_envelope", packet)
@@ -222,6 +289,35 @@ def _expected_next_owner(stage_name: str, packet: dict[str, Any]) -> str:
             return "orchestrator"
         return "final"
     return NEXT_OWNER.get(stage_name, "unknown")
+
+
+def _non_empty_list(value: Any) -> bool:
+    return isinstance(value, list) and len(value) > 0
+
+
+def _validate_lane_reason_items(field_name: str, value: Any, error) -> bool:
+    if value is None:
+        return False
+    if not isinstance(value, list):
+        error(f"completion.{field_name}.shape", field_name, "must be a list")
+        return False
+
+    valid_items = 0
+    for index, item in enumerate(value):
+        path = f"{field_name}[{index}]"
+        if not isinstance(item, dict):
+            error(f"completion.{field_name}.item_shape", path, "must be an object")
+            continue
+        has_lane_id = bool(item.get("lane_id"))
+        has_reason = bool(item.get("reason"))
+        if not has_lane_id:
+            error(f"completion.{field_name}.lane_id", f"{path}.lane_id", "lane_id is required")
+        if not has_reason:
+            error(f"completion.{field_name}.reason", f"{path}.reason", "reason is required")
+        if has_lane_id and has_reason:
+            valid_items += 1
+
+    return valid_items > 0
 
 
 def _validate_materialization(stage_name: str, packet: dict[str, Any], error) -> None:
@@ -258,5 +354,7 @@ def _validate_materialization(stage_name: str, packet: dict[str, Any], error) ->
                 error("handoff.spawn_receipt_ref", f"{path}.spawn_receipt_ref", "spawn receipt evidence is required")
             if not (item.get("agent_id") or item.get("submission_id")):
                 error("handoff.agent_id", f"{path}.agent_id", "agent_id or submission_id is required")
+            if not item.get("wait_handle"):
+                error("handoff.wait_handle", f"{path}.wait_handle", "wait_handle is required")
             if not item.get("wait_agent_evidence"):
                 error("handoff.wait_agent_evidence", f"{path}.wait_agent_evidence", "wait_agent evidence is required")

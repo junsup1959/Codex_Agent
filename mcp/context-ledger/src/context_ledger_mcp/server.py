@@ -9,6 +9,7 @@ from mcp.server.fastmcp import FastMCP
 
 from context_ledger_mcp.ledger import ContextLedger, LedgerError
 from context_ledger_mcp.validation import (
+    validate_stage_completion as validate_stage_completion_payload,
     validate_stage_packet as validate_stage_packet_payload,
     validate_tool_sequence as validate_tool_sequence_payload,
 )
@@ -223,6 +224,21 @@ def validate_stage_packet(
             completed_stages = [item["stage_name"] for item in ledger.query_run_ledger(run_id)["stage_passes"]]
         result = _ok(validate_stage_packet_payload(stage_name, packet, current_revision=current_revision, completed_stages=completed_stages))
         _record_tool(run_id, stage_name, "validate_stage_packet", {"require_current_revision": require_current_revision}, result, current_revision)
+        return result
+    except Exception as exc:
+        return _error(exc)
+
+
+@mcp.tool()
+def validate_stage_completion(
+    run_id: str,
+    stage_name: str,
+    packet: dict[str, Any],
+) -> dict[str, Any]:
+    """Validate completion readiness separately from stage packet shape."""
+    try:
+        result = _ok(validate_stage_completion_payload(stage_name, packet))
+        _record_tool(run_id, stage_name, "validate_stage_completion", None, result)
         return result
     except Exception as exc:
         return _error(exc)

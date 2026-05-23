@@ -3,6 +3,7 @@ param(
     [string[]]$Servers = @("MCP_DOCKER", "codex-context-ledger"),
     [switch]$Check,
     [switch]$PrintOnly,
+    [switch]$SelfTest,
     [string]$OutputPath
 )
 
@@ -48,6 +49,7 @@ $KnownTools = @{
         "mark_stale",
         "set_role_pass_readiness",
         "validate_stage_packet",
+        "validate_stage_completion",
         "validate_context_revision",
         "record_mcp_quiescence",
         "validate_tool_sequence",
@@ -105,6 +107,7 @@ function Ensure-ApprovalBlock {
     } else {
         $newBlock = $block.TrimEnd() + "`r`napproval_mode = `"approve`"`r`n"
     }
+    $newBlock = $newBlock -replace "`r?`n", "`r`n"
 
     return @{
         Content = $Content.Substring(0, $match.Index) + $newBlock + $Content.Substring($match.Index + $match.Length)
@@ -144,6 +147,74 @@ function Remove-StaleApprovalBlocks {
         RemovedTools = @($removed)
         Changed = ($removed.Count -gt 0)
     }
+}
+
+function Assert-StringEqual {
+    param(
+        [string]$Name,
+        [string]$Actual,
+        [string]$Expected
+    )
+
+    if ($Actual -cne $Expected) {
+        throw "SelfTest failed: $Name"
+    }
+}
+
+function Assert-ArrayEqual {
+    param(
+        [string]$Name,
+        [string[]]$Actual,
+        [string[]]$Expected
+    )
+
+    $actualText = $Actual -join "|"
+    $expectedText = $Expected -join "|"
+    if ($actualText -cne $expectedText) {
+        throw "SelfTest failed: $Name"
+    }
+}
+
+function Invoke-SelfTest {
+    $server = "codex-context-ledger"
+    $tool = "initialize_run"
+
+    $missingInput = "[mcp_servers.$server]`r`n"
+    $missingExpected = "[mcp_servers.$server]`r`n[mcp_servers.$server.tools.$tool]`r`napproval_mode = `"approve`"`r`n"
+    $missingResult = Ensure-ApprovalBlock -Content $missingInput -ServerName $server -ToolName $tool
+    Assert-StringEqual "missing tool block" $missingResult.Content $missingExpected
+
+    $wrongModeInput = "[mcp_servers.$server]`r`n[mcp_servers.$server.tools.$tool]`r`napproval_mode = `"ask`"`r`n"
+    $wrongModeExpected = "[mcp_servers.$server]`r`n[mcp_servers.$server.tools.$tool]`r`napproval_mode = `"approve`"`r`n"
+    $wrongModeResult = Ensure-ApprovalBlock -Content $wrongModeInput -ServerName $server -ToolName $tool
+    Assert-StringEqual "wrong approval mode" $wrongModeResult.Content $wrongModeExpected
+
+    $commentInput = "[mcp_servers.$server]`r`n# [mcp_servers.$server.tools.$tool]`r`n# approval_mode = `"ask`"`r`n"
+    $commentExpected = "[mcp_servers.$server]`r`n# [mcp_servers.$server.tools.$tool]`r`n# approval_mode = `"ask`"`r`n[mcp_servers.$server.tools.$tool]`r`napproval_mode = `"approve`"`r`n"
+    $commentResult = Ensure-ApprovalBlock -Content $commentInput -ServerName $server -ToolName $tool
+    Assert-StringEqual "commented table ignored" $commentResult.Content $commentExpected
+
+    $staleInput = "[mcp_servers.$server]`r`n[mcp_servers.$server.tools.$tool]`r`napproval_mode = `"approve`"`r`n[mcp_servers.$server.tools.initialize_run_extra]`r`napproval_mode = `"approve`"`r`n"
+    $staleExpected = "[mcp_servers.$server]`r`n[mcp_servers.$server.tools.$tool]`r`napproval_mode = `"approve`"`r`n"
+    $staleResult = Remove-StaleApprovalBlocks -Content $staleInput -ServerName $server -AllowedTools @($tool)
+    Assert-StringEqual "stale tool removed" $staleResult.Content $staleExpected
+    Assert-ArrayEqual "stale tool classified" $staleResult.RemovedTools @("initialize_run_extra")
+
+    $duplicateLookingInput = "[mcp_servers.$server]`r`n[mcp_servers.$server.tools.$tool]`r`napproval_mode = `"approve`"`r`n[mcp_servers.$server.tools.initialize_run_v2]`r`napproval_mode = `"approve`"`r`n"
+    $duplicateLookingResult = Remove-StaleApprovalBlocks -Content $duplicateLookingInput -ServerName $server -AllowedTools @($tool)
+    Assert-ArrayEqual "duplicate-looking tool treated as stale" $duplicateLookingResult.RemovedTools @("initialize_run_v2")
+
+    $missingServerPattern = "(?m)^\[mcp_servers\.$(Escape-RegexLiteral $server)\]\s*$"
+    if ("[mcp_servers.other]`r`n" -match $missingServerPattern) {
+        throw "SelfTest failed: missing server detection"
+    }
+
+    Write-Host "SelfTest passed: ensure-mcp-tool-approvals fixtures"
+}
+
+if ($SelfTest) {
+    Invoke-SelfTest
+    exit 0
 }
 
 if (-not (Test-Path -LiteralPath $ConfigPath)) {
