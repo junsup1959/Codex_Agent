@@ -9,6 +9,6 @@
   "input_artifacts": ["review_plan", "worker_handoff_results", "active_passes", "fanout_budget"],
   "output_artifacts": ["review_handoff_results", "review_waivers", "review_coverage"],
   "forbidden_outputs": ["execution_plan", "worker_handoff_results", "judgment_envelope", "final_output"],
-  "required_evidence": ["specialist_catalog_enumeration", "spawn_receipt_ref", "wait_agent_evidence", "review_coverage_contract", "mcp_quiescence_snapshot"],
-  "source_docs": ["04-aggregation-review.md", "06-agent-roster-models.md", "07-contracts-ledgers.md", "09-runtime-orchestration-steps.md"]
+  "required_evidence": ["context_ledger_barrier", "mcp_tool_call_sequence", "validate_stage_packet_result", "validate_tool_sequence_result", "mcp_tool_return_values", "validate_context_revision_result", "consumed_context_revision", "context_delta", "new_artifact_refs", "new_evidence_refs", "stage_pass_ref", "specialist_catalog_enumeration", "spawn_receipt_ref", "child_agent_identity", "wait_agent_evidence", "review_coverage_contract", "mcp_quiescence_snapshot"],
+  "source_docs": ["04-review-flow.md", "06-agent-roster-models.md", "07-contracts-ledgers.md", "09-runtime-orchestration-steps.md"]
 }

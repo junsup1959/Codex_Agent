@@ -71,6 +71,18 @@ CREATE TABLE IF NOT EXISTS mcp_quiescence_snapshots (
   FOREIGN KEY (run_id) REFERENCES runs(run_id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS tool_call_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  run_id TEXT NOT NULL,
+  stage_name TEXT NOT NULL,
+  tool_name TEXT NOT NULL,
+  context_revision INTEGER,
+  payload_json TEXT NOT NULL DEFAULT '{}',
+  result_json TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+  FOREIGN KEY (run_id) REFERENCES runs(run_id) ON DELETE CASCADE
+);
+
 CREATE INDEX IF NOT EXISTS idx_context_packets_run_revision
 ON context_packets (run_id, revision DESC);
 
@@ -80,3 +92,5 @@ ON artifact_refs (run_id);
 CREATE INDEX IF NOT EXISTS idx_stage_passes_run
 ON stage_passes (run_id);
 
+CREATE INDEX IF NOT EXISTS idx_tool_call_events_run_stage
+ON tool_call_events (run_id, stage_name, id);

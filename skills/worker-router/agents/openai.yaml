@@ -1,4 +1,0 @@
-interface:
-  display_name: "Worker Router"
-  short_description: "Main-agent worker launch manifest routing"
-  default_prompt: "Use $worker-router to turn an execution_plan into a validated worker launch_manifest."

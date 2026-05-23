@@ -1,4 +1,0 @@
-interface:
-  display_name: "Review/Aggregator Handoff"
-  short_description: "Pass structured results to aggregator and review"
-  default_prompt: "Use $review-aggregator-handoff to package this agent result for aggregator or review without breaking the canonical loop."

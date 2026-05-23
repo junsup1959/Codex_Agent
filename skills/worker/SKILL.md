@@ -5,38 +5,39 @@ description: Execute the mandatory global Codex Worker materialization stage. Us
 
 # Worker
 
-Use this skill after `$task-planner`. The main agent uses this skill to enumerate specialist TOML roles, spawn bounded worker specialists, wait for every spawned child, and classify every lane before review distribution.
+Use this skill after `$task-planner`. The main agent uses it to spawn concrete specialist workers and wait for their results.
 
-## Contract Gate
+## MCP Tool Sequence
 
-Before running this skill, read the adjacent `contract.json`. Prefer `scripts/check_worker_wave.py` for a local preflight of the worker wave packet before spawning. If this skill, its contract, or its scripts change, run `python ${CODEX_HOME}/agent-architecture/validate-skill-contracts.py` before handoff.
+Call these ledger tools in order with `stage_name="worker"` where accepted.
 
-## Inputs
+1. `read_context_packet(run_id, stage_name)`
+2. `validate_context_revision(run_id, context_revision=<read.context_revision>, stage_name)`
+3. Enumerate `${CODEX_HOME}/agents/<category>/*.toml`, select bounded worker specialists, then call `spawn_agent`/`wait_agent` outside the ledger API.
+4. `append_stage_pass(run_id, stage_name, stage_execution_mode="main_agent_role_pass", evidence, context_revision=<read.context_revision>)`
+5. Build `worker_handoff_results` with `stage_pass_ref="stage_pass:worker:<append.id>"`.
+6. `validate_stage_packet(run_id, stage_name, packet=<stage_packet>)`
+7. `write_context_packet(run_id, packet=<context_delta_applied_packet>, expected_revision=<read.context_revision>, stage_name)`
+8. `record_mcp_quiescence(run_id, stage_name, snapshot)`
+9. `validate_tool_sequence(run_id, stage_name)`
 
-- current `execution_plan`
-- `fanout_budget`
-- latest `context_packet_version`
-- full specialist catalog from `${CODEX_HOME}/agents/<category>/*.toml`
-- `${CODEX_HOME}/agent-architecture/03-worker-routing.md`
-- `${CODEX_HOME}/agent-architecture/06-agent-roster-models.md`
-- `${CODEX_HOME}/agent-architecture/07-contracts-ledgers.md`
-- `${CODEX_HOME}/agent-architecture/09-runtime-orchestration-steps.md`
+Use `record_artifact_ref` for returned artifacts and `mark_stale` for superseded inputs before step 7.
 
-## Workflow
+## Required Return Values
 
-1. Enumerate the complete specialist catalog; select concrete TOML-backed worker roles only.
-2. Convert each plan lane into a scoped specialist spawn packet.
-3. Enforce `fanout_budget`; coalesce or classify overflow instead of over-spawning.
-4. Call `spawn_agent` for each selected specialist worker.
-5. Record `spawn_receipt_ref`, `agent_id`, `submission_id`, and `wait_handle` in `active_passes`.
-6. Call `wait_agent` for every spawned worker before review distribution.
-7. Classify each lane as returned, timed_out, failed, superseded, schema_invalid, no_wait_handle, or thread_limit_reached.
-8. Return `worker_handoff_results`, `active_passes`, and missing-lane classifications.
+- `validate_context_revision.valid=true`
+- `spawn_receipt_ref`, `agent_id` or `submission_id`, and `wait_agent` evidence for every spawned child
+- `append.id` converted to `stage_pass_ref`
+- `validate_stage_packet.valid=true`
+- `write.context_revision`
+- `validate_tool_sequence.valid=true`
+
+## Output
+
+Return `worker_handoff_results`, `active_passes`, missing-lane classifications, artifact/evidence refs, `context_delta`, and `next_owner="review-distributor"`.
 
 ## Hard Rules
 
-- Do not use generic `worker` as a spawned `agent_role`.
-- Do not spawn from memory, skill names, or family aliases.
-- Do not continue with an unwaited spawned child.
-- `close_agent` is cleanup only; it is not wait evidence.
-- Do not review or approve final output.
+- Do not spawn generic `worker` roles.
+- Do not continue with unwaited children.
+- `close_agent` is cleanup only, not result evidence.

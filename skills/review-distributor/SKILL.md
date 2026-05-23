@@ -5,42 +5,38 @@ description: Execute the mandatory global Codex Review Distributor stage. Use wh
 
 # Review Distributor
 
-Use this skill after specialist worker lanes have returned or been explicitly classified. The main agent performs review distribution locally, then spawns concrete reviewer specialists from the TOML catalog.
+Use this skill after `$worker` returns or classifies all worker lanes. It creates the review plan; `$review` owns reviewer spawning.
 
-## Contract Gate
+## MCP Tool Sequence
 
-Before running this skill, read the adjacent `contract.json`. Treat `input_artifacts`, `output_artifacts`, `forbidden_outputs`, `required_evidence`, and `source_docs` as the local checklist. Load the listed `${CODEX_HOME}/agent-architecture/<source_doc>` files before emitting the stage artifact. Prefer `scripts/check_review_distribution.py` before handing work to `$review`. If this skill, its contract, scripts, or source docs change, run `python ${CODEX_HOME}/agent-architecture/validate-skill-contracts.py`.
+Call these tools in order with `stage_name="review-distributor"` where accepted.
 
-## Inputs
+1. `read_context_packet(run_id, stage_name)`
+2. `validate_context_revision(run_id, context_revision=<read.context_revision>, stage_name)`
+3. Confirm all worker lanes are returned or explicitly classified.
+4. Enumerate review-capable TOML specialists and build a bounded `review_plan`.
+5. `append_stage_pass(run_id, stage_name, stage_execution_mode="main_agent_role_pass", evidence, context_revision=<read.context_revision>)`
+6. Add `stage_pass_ref="stage_pass:review-distributor:<append.id>"`.
+7. `validate_stage_packet(run_id, stage_name, packet=<stage_packet>)`
+8. `write_context_packet(run_id, packet=<context_delta_applied_packet>, expected_revision=<read.context_revision>, stage_name)`
+9. `record_mcp_quiescence(run_id, stage_name, snapshot)`
+10. `validate_tool_sequence(run_id, stage_name)`
 
-Read these before routing review:
+## Required Return Values
 
-- returned worker `handoff_result` packets and missing-lane classifications
-- changed artifacts, validation evidence, blockers, and unresolved assumptions
-- current `context_packet_version` and `fanout_budget`
-- full specialist catalog under `${CODEX_HOME}/agents/<category>/*.toml`
-- `${CODEX_HOME}/agent-architecture/04-aggregation-review.md`
-- `${CODEX_HOME}/agent-architecture/06-agent-roster-models.md`
-- `${CODEX_HOME}/agent-architecture/07-contracts-ledgers.md`
-- `${CODEX_HOME}/agent-architecture/09-runtime-orchestration-steps.md`
+- `validate_context_revision.valid=true`
+- complete specialist catalog enumeration evidence
+- `append.id` converted to `stage_pass_ref`
+- `validate_stage_packet.valid=true`
+- `write.context_revision`
+- `validate_tool_sequence.valid=true`
 
-## Specialist List Gate
+## Output
 
-Before selecting any reviewer lane, enumerate the complete specialist list from `${CODEX_HOME}/agents/<category>/*.toml`. Use only concrete TOML roles that are valid review specialists. Do not route from memory, family aliases, skill names, or partial category views.
-
-## Workflow
-
-1. Confirm every worker lane is returned, timed out, failed, superseded, schema-invalid, or explicitly classified.
-2. Determine required review axes from risk, code changes, MCP evidence, tests, security, architecture, and user-facing impact.
-3. Select the minimum bounded reviewer specialists that satisfy coverage within `fanout_budget`.
-4. Emit a `review_plan` with scoped packets and concrete validation prompts.
-5. Hand the plan to `$review`; `$review` owns reviewer `spawn_agent` and `wait_agent`.
-6. Preserve explicit review waivers for `$feedbackgate`.
+Emit `review_plan`, explicit `review_waivers` if any, review coverage evidence, `context_delta`, and `next_owner="review"`.
 
 ## Hard Rules
 
+- Do not call `spawn_agent`.
 - Do not judge final readiness.
-- Do not skip review when worker evidence is incomplete unless an explicit review waiver is recorded.
-- Do not route review work to canonical stage owners.
-- Do not aggregate from prose-only worker summaries.
-- Do not exceed the review fanout budget.
+- Do not route from memory, family aliases, skill names, or partial specialist lists.

@@ -222,6 +222,49 @@ class ContextLedger:
             snapshot_id = cursor.lastrowid
         return {"id": snapshot_id, "run_id": run_id, "stage_name": stage_name}
 
+    def record_tool_call(
+        self,
+        run_id: str,
+        stage_name: str,
+        tool_name: str,
+        payload: JsonObject | None = None,
+        result: JsonObject | None = None,
+        context_revision: int | None = None,
+    ) -> JsonObject:
+        self._require_run(run_id)
+        with self._connection() as connection:
+            cursor = connection.execute(
+                """
+                INSERT INTO tool_call_events
+                  (run_id, stage_name, tool_name, context_revision, payload_json, result_json)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    run_id,
+                    stage_name,
+                    tool_name,
+                    context_revision,
+                    _to_json(payload or {}),
+                    _to_json(result or {}),
+                ),
+            )
+            self._touch_run(connection, run_id)
+            event_id = cursor.lastrowid
+        return {"id": event_id, "run_id": run_id, "stage_name": stage_name, "tool_name": tool_name}
+
+    def list_tool_calls(self, run_id: str, stage_name: str) -> list[JsonObject]:
+        self._require_run(run_id)
+        with self._connection() as connection:
+            rows = connection.execute(
+                """
+                SELECT * FROM tool_call_events
+                WHERE run_id = ? AND stage_name = ?
+                ORDER BY id
+                """,
+                (run_id, stage_name),
+            ).fetchall()
+        return [_row_to_json(row, json_fields={"payload_json", "result_json"}) for row in rows]
+
     def validate_context_revision(self, run_id: str, context_revision: int) -> JsonObject:
         self._require_run(run_id)
         current_revision = self._current_revision(run_id)
@@ -249,6 +292,9 @@ class ContextLedger:
             stale_markers = connection.execute(
                 "SELECT * FROM stale_markers WHERE run_id = ? ORDER BY id", (run_id,)
             ).fetchall()
+            tool_calls = connection.execute(
+                "SELECT * FROM tool_call_events WHERE run_id = ? ORDER BY id", (run_id,)
+            ).fetchall()
         return {
             "run": _row_to_json(run, json_fields={"metadata_json"}),
             "current_revision": self._current_revision(run_id),
@@ -256,6 +302,7 @@ class ContextLedger:
             "stage_passes": [_row_to_json(row, json_fields={"evidence_json"}) for row in stage_passes],
             "readiness_flags": [_row_to_json(row) for row in readiness],
             "stale_markers": [_row_to_json(row) for row in stale_markers],
+            "tool_call_events": [_row_to_json(row, json_fields={"payload_json", "result_json"}) for row in tool_calls],
         }
 
     def close_run(self, run_id: str, status: str = "closed") -> JsonObject:

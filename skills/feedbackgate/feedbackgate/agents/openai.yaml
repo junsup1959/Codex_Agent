@@ -1,4 +1,0 @@
-interface:
-  display_name: "Feedbackgate"
-  short_description: "Final versus feedback judgment gate"
-  default_prompt: "Use $feedbackgate to judge specialist review evidence and decide final output or feedback to orchestrator."

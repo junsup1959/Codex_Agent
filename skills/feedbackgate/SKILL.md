@@ -5,36 +5,38 @@ description: Execute the mandatory global Codex Feedback Gate stage. Use when sp
 
 # Feedbackgate
 
-Use this skill after specialist review lanes return or receive explicit waivers. The main agent performs the final judgment locally and either allows final output or loops back to `$orchestrator`.
+Use this skill after `$review` returns reviewer results or explicit waivers. It is the only stage that may allow final output.
 
-## Contract Gate
+## MCP Tool Sequence
 
-Before running this skill, read the adjacent `contract.json`. Treat `input_artifacts`, `output_artifacts`, `forbidden_outputs`, `required_evidence`, and `source_docs` as the local checklist. Load the listed `${CODEX_HOME}/agent-architecture/<source_doc>` files before emitting the stage artifact. Prefer `scripts/check_feedbackgate.py` before final output. If this skill, its contract, scripts, or source docs change, run `python ${CODEX_HOME}/agent-architecture/validate-skill-contracts.py`.
+Call these tools in order with `stage_name="feedbackgate"` where accepted.
 
-## Inputs
+1. `read_context_packet(run_id, stage_name)`
+2. `validate_context_revision(run_id, context_revision=<read.context_revision>, stage_name)`
+3. Judge worker and review evidence, waivers, MCP validation results, blockers, and MCP/tool cleanup.
+4. `append_stage_pass(run_id, stage_name, stage_execution_mode="main_agent_role_pass", evidence, context_revision=<read.context_revision>)`
+5. Build `judgment_envelope` with `stage_pass_ref="stage_pass:feedbackgate:<append.id>"`.
+6. `validate_stage_packet(run_id, stage_name, packet=<stage_packet>)`
+7. `write_context_packet(run_id, packet=<context_delta_applied_packet>, expected_revision=<read.context_revision>, stage_name)`
+8. `record_mcp_quiescence(run_id, stage_name, snapshot)`
+9. `validate_tool_sequence(run_id, stage_name)`
 
-Read these before judgment:
+## Required Return Values
 
-- worker `handoff_result` packets and worker lane classifications
-- specialist review `handoff_result` packets or explicit review waivers
-- current `stage_passes`, `active_passes`, validator evidence, and MCP evidence
-- latest `context_packet_version`, blockers, and loop carryover
-- `${CODEX_HOME}/agent-architecture/05-feedback-lifecycle.md`
-- `${CODEX_HOME}/agent-architecture/07-contracts-ledgers.md`
-- `${CODEX_HOME}/agent-architecture/08-quality-evals.md`
-- `${CODEX_HOME}/agent-architecture/09-runtime-orchestration-steps.md`
+- `validate_context_revision.valid=true`
+- current review inputs or explicit waivers
+- non-empty `feedback_gate_evidence`
+- `append.id` converted to `stage_pass_ref`
+- `validate_stage_packet.valid=true`
+- `write.context_revision`
+- `validate_tool_sequence.valid=true`
+- clean `mcp_quiescence_snapshot`
 
-## Workflow
+## Output
 
-1. Verify all spawned worker and review specialists were waited or explicitly classified.
-2. Verify review coverage, waivers, validator evidence, MCP evidence, and tool cleanup.
-3. If any blocker remains, emit `feedback_required=true`, bounded rework scope, and `next_owner="orchestrator"`.
-4. If all checks pass, emit final approval evidence and allow the user-facing final output.
-5. Preserve `loop_carryover` and do not widen scope on feedback.
+Return `judgment_envelope`. If `feedback_required=true`, set `next_owner="orchestrator"` and bounded rework scope. If approved, set `next_owner="final"` and allow the user-facing final response.
 
 ## Hard Rules
 
-- Do not issue final, ready, complete, approve, or merge-ready language before this gate passes.
-- Do not accept prose-only review evidence.
-- Do not approve with missing waits, stale context, schema-invalid outputs, open MCP/tool residue, or unresolved review blockers.
-- Feedback always returns to `$orchestrator`; it never jumps directly into a mid-loop specialist.
+- Do not approve with stale context, missing waits, invalid review evidence, missing waivers, or open MCP/tool residue.
+- Feedback always returns to `$orchestrator`; it never jumps directly to a mid-loop stage.

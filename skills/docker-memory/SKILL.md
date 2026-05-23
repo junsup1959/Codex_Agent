@@ -9,7 +9,7 @@ Use this skill only when memory helps the current task. It is an optional helper
 
 ## Contract Gate
 
-Before using this optional helper, read the adjacent `contract.json` and preserve `mandatory_for_architecture_required=false`. Treat `source_docs`, `forbidden_outputs`, and `required_evidence` as guardrails. If this skill or contract changes, run `python ${CODEX_HOME}/agent-architecture/validate-skill-contracts.py`; this validates the optional boundary without making Docker Memory mandatory.
+Before using this optional helper, read the adjacent `contract.json` and preserve `mandatory_for_architecture_required=false`. Treat `source_docs`, `forbidden_outputs`, and `required_evidence` as guardrails. Docker Memory remains optional and is not enforced as an architecture gate.
 
 ## Tooling
 
@@ -32,5 +32,5 @@ Prefer Docker MCP Memory through `MCP_DOCKER`:
 
 - Do not force memory use from global Markdown contracts.
 - Do not store secrets, private credentials, raw personal data, or large artifact contents.
-- Do not treat memory as a substitute for validators, MCP session activation checks, or current CLI output.
+- Do not treat memory as a substitute for MCP validation results, MCP session activation checks, or current CLI output.
 - Do not overwrite or delete memory unless explicitly asked.

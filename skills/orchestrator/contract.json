@@ -9,6 +9,6 @@
   "input_artifacts": ["user_goal", "latest_user_message", "feedback_carryover"],
   "output_artifacts": ["orchestration_request"],
   "forbidden_outputs": ["context_packet", "execution_plan", "worker_handoff_results", "review_handoff_results", "judgment_envelope"],
-  "required_evidence": ["mcp_usage_evidence_or_waiver", "mcp_quiescence_snapshot", "contract_provenance"],
+  "required_evidence": ["context_ledger_barrier", "mcp_tool_call_sequence", "validate_stage_packet_result", "validate_tool_sequence_result", "mcp_tool_return_values", "validate_context_revision_result", "consumed_context_revision", "context_delta", "new_artifact_refs", "new_evidence_refs", "stage_pass_ref", "mcp_usage_evidence_or_waiver", "mcp_quiescence_snapshot", "contract_provenance"],
   "source_docs": ["00-canonical-map.md", "01-harness-layer.md", "07-contracts-ledgers.md", "09-runtime-orchestration-steps.md"]
 }

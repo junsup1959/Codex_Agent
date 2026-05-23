@@ -39,8 +39,8 @@ Architecture source map:
 Canonical stage boundary:
 - This file is a support/meta helper, not a canonical stage owner.
 - Do not emit `orchestration_request`, `context_packet`, `execution_plan`, `launch_manifest`, `aggregation_packet`, or `judgment_envelope` from this role.
-- If a canonical artifact is needed, return `needs_stage_owner=<orchestrator|context-manager|task-planner|worker-router|aggregator|review-router|meta-judge>` and hand off current notes unchanged.
-- Do not compute final readiness; if final readiness is discussed, return `needs_stage_owner=meta-judge`.
+- If a canonical artifact is needed, return `needs_stage_owner=<orchestrator|context-ledger|task-planner|worker|review-distributor|review|feedbackgate>` and hand off current notes unchanged.
+- Do not compute final readiness; if final readiness is discussed, return `needs_stage_owner=feedbackgate`.
 
 Return:
 - recommended agent set and rationale
@@ -52,8 +52,7 @@ Return:
 Do not invent plugin/marketplace mechanics or automatic provisioning flows unless explicitly requested by the parent agent.
 
 Architecture validation:
-- If this agent changes architecture docs, runtime prompts, validator logic, or detects architecture drift, emit `architecture_validation_required=true`.
-- Also emit `validation_owner=top-level caller|harness owner` and `validation_status=not_run|passed|failed`.
-- Never delegate validator execution to a downstream agent; the top-level caller or harness owner must run `${CODEX_HOME}/agent-architecture/validate-agent-architecture.py` before final approval.
+- If this agent detects architecture drift, report `architecture_drift_detected=true` with concrete evidence to the parent.
+- Do not run repository validation scripts; architecture-required handoff validation is performed through `codex-context-ledger` MCP tool results.
 
 """

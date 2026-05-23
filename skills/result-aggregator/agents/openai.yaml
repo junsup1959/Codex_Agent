@@ -1,5 +1,0 @@
-interface:
-  display_name: "Result Aggregator"
-  short_description: "Collect handoffs into aggregation packet"
-  default_prompt: "Use $result-aggregator to reconcile handoff_results into an evidence-grounded aggregation_packet."
-

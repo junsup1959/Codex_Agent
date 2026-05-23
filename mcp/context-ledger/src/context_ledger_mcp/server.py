@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 import os
+import argparse
 from pathlib import Path
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
 from context_ledger_mcp.ledger import ContextLedger, LedgerError
+from context_ledger_mcp.validation import (
+    validate_stage_packet as validate_stage_packet_payload,
+    validate_tool_sequence as validate_tool_sequence_payload,
+)
 
 
 DEFAULT_DB_PATH = Path.cwd() / "data" / "context-ledger.sqlite"
@@ -27,20 +32,40 @@ def _error(error: Exception) -> dict[str, Any]:
     return {"ok": False, "error": type(error).__name__, "message": str(error)}
 
 
+def _record_tool(
+    run_id: str,
+    stage_name: str | None,
+    tool_name: str,
+    payload: dict[str, Any] | None,
+    result: dict[str, Any],
+    context_revision: int | None = None,
+) -> None:
+    if not stage_name:
+        return
+    try:
+        _ledger().record_tool_call(run_id, stage_name, tool_name, payload, result, context_revision)
+    except Exception:
+        pass
+
+
 @mcp.tool()
-def initialize_run(run_id: str, goal: str, metadata: dict[str, Any] | None = None) -> dict[str, Any]:
+def initialize_run(run_id: str, goal: str, metadata: dict[str, Any] | None = None, stage_name: str | None = None) -> dict[str, Any]:
     """Create or reopen a run ledger."""
     try:
-        return _ok({"ledger": _ledger().initialize_run(run_id, goal, metadata)})
+        result = _ok({"ledger": _ledger().initialize_run(run_id, goal, metadata)})
+        _record_tool(run_id, stage_name, "initialize_run", {"goal": goal, "metadata": metadata}, result)
+        return result
     except Exception as exc:
         return _error(exc)
 
 
 @mcp.tool()
-def read_context_packet(run_id: str, revision: int | None = None) -> dict[str, Any]:
+def read_context_packet(run_id: str, revision: int | None = None, stage_name: str | None = None) -> dict[str, Any]:
     """Read the latest or requested context packet revision."""
     try:
-        return _ok(_ledger().read_context_packet(run_id, revision))
+        result = _ok(_ledger().read_context_packet(run_id, revision))
+        _record_tool(run_id, stage_name, "read_context_packet", {"revision": revision}, result, result.get("context_revision"))
+        return result
     except Exception as exc:
         return _error(exc)
 
@@ -50,10 +75,13 @@ def write_context_packet(
     run_id: str,
     packet: dict[str, Any],
     expected_revision: int | None = None,
+    stage_name: str | None = None,
 ) -> dict[str, Any]:
     """Append a context packet revision, optionally guarded by the current revision."""
     try:
-        return _ok(_ledger().write_context_packet(run_id, packet, expected_revision))
+        result = _ok(_ledger().write_context_packet(run_id, packet, expected_revision))
+        _record_tool(run_id, stage_name, "write_context_packet", {"expected_revision": expected_revision}, result, result.get("context_revision"))
+        return result
     except Exception as exc:
         return _error(exc)
 
@@ -65,10 +93,11 @@ def record_artifact_ref(
     artifact_type: str,
     producer_stage: str | None = None,
     metadata: dict[str, Any] | None = None,
+    stage_name: str | None = None,
 ) -> dict[str, Any]:
     """Attach an artifact reference to a run."""
     try:
-        return _ok(
+        result = _ok(
             _ledger().record_artifact_ref(
                 run_id,
                 artifact_ref,
@@ -77,6 +106,8 @@ def record_artifact_ref(
                 metadata,
             )
         )
+        _record_tool(run_id, stage_name or producer_stage, "record_artifact_ref", {"artifact_ref": artifact_ref, "artifact_type": artifact_type}, result)
+        return result
     except Exception as exc:
         return _error(exc)
 
@@ -91,7 +122,7 @@ def append_stage_pass(
 ) -> dict[str, Any]:
     """Append stage pass evidence for a control or specialist stage."""
     try:
-        return _ok(
+        result = _ok(
             _ledger().append_stage_pass(
                 run_id,
                 stage_name,
@@ -100,6 +131,8 @@ def append_stage_pass(
                 context_revision,
             )
         )
+        _record_tool(run_id, stage_name, "append_stage_pass", {"stage_execution_mode": stage_execution_mode, "context_revision": context_revision}, result, context_revision)
+        return result
     except Exception as exc:
         return _error(exc)
 
@@ -111,10 +144,11 @@ def set_role_pass_readiness(
     ready: bool,
     context_revision: int,
     reason: str | None = None,
+    stage_name: str | None = None,
 ) -> dict[str, Any]:
     """Set readiness for a downstream role pass at the current context revision."""
     try:
-        return _ok(
+        result = _ok(
             _ledger().set_role_pass_readiness(
                 run_id,
                 role_name,
@@ -123,6 +157,8 @@ def set_role_pass_readiness(
                 reason,
             )
         )
+        _record_tool(run_id, stage_name or "context-ledger", "set_role_pass_readiness", {"role_name": role_name, "ready": ready}, result, context_revision)
+        return result
     except Exception as exc:
         return _error(exc)
 
@@ -133,10 +169,13 @@ def mark_stale(
     target_ref: str,
     reason: str,
     context_revision: int | None = None,
+    stage_name: str | None = None,
 ) -> dict[str, Any]:
     """Mark a context item, artifact, or stage reference as stale."""
     try:
-        return _ok(_ledger().mark_stale(run_id, target_ref, reason, context_revision))
+        result = _ok(_ledger().mark_stale(run_id, target_ref, reason, context_revision))
+        _record_tool(run_id, stage_name, "mark_stale", {"target_ref": target_ref, "reason": reason}, result, context_revision)
+        return result
     except Exception as exc:
         return _error(exc)
 
@@ -149,16 +188,55 @@ def record_mcp_quiescence(
 ) -> dict[str, Any]:
     """Record MCP cleanup evidence for a stage."""
     try:
-        return _ok(_ledger().record_mcp_quiescence(run_id, stage_name, snapshot))
+        result = _ok(_ledger().record_mcp_quiescence(run_id, stage_name, snapshot))
+        _record_tool(run_id, stage_name, "record_mcp_quiescence", {"snapshot": snapshot}, result)
+        return result
     except Exception as exc:
         return _error(exc)
 
 
 @mcp.tool()
-def validate_context_revision(run_id: str, context_revision: int) -> dict[str, Any]:
+def validate_context_revision(run_id: str, context_revision: int, stage_name: str | None = None) -> dict[str, Any]:
     """Check whether a caller is using the latest context revision."""
     try:
-        return _ok(_ledger().validate_context_revision(run_id, context_revision))
+        result = _ok(_ledger().validate_context_revision(run_id, context_revision))
+        _record_tool(run_id, stage_name, "validate_context_revision", {"context_revision": context_revision}, result, context_revision)
+        return result
+    except Exception as exc:
+        return _error(exc)
+
+
+@mcp.tool()
+def validate_stage_packet(
+    run_id: str,
+    stage_name: str,
+    packet: dict[str, Any],
+    require_current_revision: bool = True,
+) -> dict[str, Any]:
+    """Validate a stage packet against ledger barrier and handoff rules."""
+    try:
+        current_revision = None
+        completed_stages = None
+        if require_current_revision:
+            ledger = _ledger()
+            current_revision = ledger.read_context_packet(run_id)["context_revision"]
+            completed_stages = [item["stage_name"] for item in ledger.query_run_ledger(run_id)["stage_passes"]]
+        result = _ok(validate_stage_packet_payload(stage_name, packet, current_revision=current_revision, completed_stages=completed_stages))
+        _record_tool(run_id, stage_name, "validate_stage_packet", {"require_current_revision": require_current_revision}, result, current_revision)
+        return result
+    except Exception as exc:
+        return _error(exc)
+
+
+@mcp.tool()
+def validate_tool_sequence(run_id: str, stage_name: str) -> dict[str, Any]:
+    """Validate that required MCP tools were called in the stage order."""
+    try:
+        events = _ledger().list_tool_calls(run_id, stage_name)
+        observed_tools = [event["tool_name"] for event in events] + ["validate_tool_sequence"]
+        result = _ok(validate_tool_sequence_payload(stage_name, observed_tools))
+        _record_tool(run_id, stage_name, "validate_tool_sequence", None, result)
+        return result
     except Exception as exc:
         return _error(exc)
 
@@ -182,9 +260,22 @@ def close_run(run_id: str, status: str = "closed") -> dict[str, Any]:
 
 
 def main() -> None:
-    mcp.run(transport="stdio")
+    parser = argparse.ArgumentParser(description="Run the Codex Context Ledger MCP server.")
+    parser.add_argument(
+        "--transport",
+        choices=("streamable-http",),
+        default=os.environ.get("CODEX_CONTEXT_LEDGER_TRANSPORT", "streamable-http"),
+    )
+    parser.add_argument("--host", default=os.environ.get("CODEX_CONTEXT_LEDGER_HOST", "127.0.0.1"))
+    parser.add_argument("--port", type=int, default=int(os.environ.get("CODEX_CONTEXT_LEDGER_PORT", "8765")))
+    parser.add_argument("--path", default=os.environ.get("CODEX_CONTEXT_LEDGER_PATH", "/mcp"))
+    args = parser.parse_args()
+
+    mcp.settings.host = args.host
+    mcp.settings.port = args.port
+    mcp.settings.streamable_http_path = args.path
+    mcp.run(transport=args.transport)
 
 
 if __name__ == "__main__":
     main()
-

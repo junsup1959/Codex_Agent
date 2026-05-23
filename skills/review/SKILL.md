@@ -5,38 +5,39 @@ description: Execute the mandatory global Codex Review materialization stage. Us
 
 # Review
 
-Use this skill after `$review-distributor`. The main agent uses this skill to spawn concrete specialist reviewers, wait for them, classify review outcomes, and prepare evidence for `$feedbackgate`.
+Use this skill after `$review-distributor`. The main agent spawns concrete reviewer specialists and waits for every reviewer.
 
-## Contract Gate
+## MCP Tool Sequence
 
-Before running this skill, read the adjacent `contract.json`. Prefer `scripts/check_review_wave.py` for a local preflight of the review wave packet before spawning. If this skill, its contract, or its scripts change, run `python ${CODEX_HOME}/agent-architecture/validate-skill-contracts.py` before handoff.
+Call these tools in order with `stage_name="review"` where accepted.
 
-## Inputs
+1. `read_context_packet(run_id, stage_name)`
+2. `validate_context_revision(run_id, context_revision=<read.context_revision>, stage_name)`
+3. Spawn TOML-backed reviewer specialists from the `review_plan`, then call `wait_agent` for each one.
+4. `append_stage_pass(run_id, stage_name, stage_execution_mode="main_agent_role_pass", evidence, context_revision=<read.context_revision>)`
+5. Build `review_handoff_results` with `stage_pass_ref="stage_pass:review:<append.id>"`.
+6. `validate_stage_packet(run_id, stage_name, packet=<stage_packet>)`
+7. `write_context_packet(run_id, packet=<context_delta_applied_packet>, expected_revision=<read.context_revision>, stage_name)`
+8. `record_mcp_quiescence(run_id, stage_name, snapshot)`
+9. `validate_tool_sequence(run_id, stage_name)`
 
-- current `review_plan` or review `launch_manifest`
-- worker `handoff_result` evidence and missing-lane classifications
-- `fanout_budget`
-- full specialist catalog from `${CODEX_HOME}/agents/<category>/*.toml`
-- `${CODEX_HOME}/agent-architecture/04-aggregation-review.md`
-- `${CODEX_HOME}/agent-architecture/06-agent-roster-models.md`
-- `${CODEX_HOME}/agent-architecture/07-contracts-ledgers.md`
-- `${CODEX_HOME}/agent-architecture/09-runtime-orchestration-steps.md`
+Use `record_artifact_ref` for review artifacts and `mark_stale` for superseded review assumptions before step 7.
 
-## Workflow
+## Required Return Values
 
-1. Enumerate review-capable specialist TOML roles.
-2. Convert each review axis into a scoped reviewer spawn packet.
-3. Enforce review fanout budget and preserve waivers for uncovered axes.
-4. Call `spawn_agent` for each selected specialist reviewer.
-5. Record spawn and wait evidence in `active_passes`.
-6. Call `wait_agent` for every spawned reviewer.
-7. Classify every review as returned, timed_out, failed, superseded, schema_invalid, no_wait_handle, or thread_limit_reached.
-8. Return `review_handoff_results`, `review_waivers`, and coverage evidence.
+- `validate_context_revision.valid=true`
+- reviewer `spawn_receipt_ref`, `agent_id` or `submission_id`, and `wait_agent` evidence
+- `append.id` converted to `stage_pass_ref`
+- `validate_stage_packet.valid=true`
+- `write.context_revision`
+- `validate_tool_sequence.valid=true`
+
+## Output
+
+Return `review_handoff_results`, `review_waivers`, coverage evidence, artifact/evidence refs, `context_delta`, and `next_owner="feedbackgate"`.
 
 ## Hard Rules
 
 - Do not approve final output.
-- Do not review from prose-only worker summaries.
+- Do not continue with unwaited review children unless explicitly classified.
 - Do not use canonical stage owners as reviewer specialists.
-- Do not continue to `$feedbackgate` with unwaited review children unless they are explicitly classified.
-- Do not ask reviewers to configure global MCP profiles; they may only use available tools in their bounded scope.

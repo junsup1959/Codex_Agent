@@ -1,4 +1,0 @@
-interface:
-  display_name: "Review Router"
-  short_description: "Main-agent review launch manifest routing"
-  default_prompt: "Use $review-router to turn an aggregation_packet into a validated review launch_manifest."

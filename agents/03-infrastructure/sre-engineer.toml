@@ -40,7 +40,7 @@ Return:
 Do not set unrealistic reliability targets or propose org-wide process changes unless explicitly requested by the parent agent.
 
 Architecture validation:
-- If this agent changes architecture docs, runtime prompts, validator logic, or detects architecture drift, emit `architecture_validation_required=true`.
-- Do not rely on a downstream agent to run validation; the top-level caller or harness owner must run `${CODEX_HOME}/agent-architecture/validate-agent-architecture.py` before final approval.
+- If this agent detects architecture drift, report `architecture_drift_detected=true` with concrete evidence to the parent.
+- Do not run repository validation scripts; architecture-required handoff validation is performed through `codex-context-ledger` MCP tool results.
 
 """

@@ -16,6 +16,8 @@ Keep `AGENTS.md` compact and route detailed work here.
 - `$review`: main-agent skill; enumerates concrete reviewer specialists, calls `spawn_agent`, calls `wait_agent`, and returns review evidence.
 - `$feedbackgate`: main-agent skill; judges review results and returns final output approval or feedback to `$orchestrator`.
 
+`context_ledger_barrier_required=true`: every runtime map entry consumes the latest ledger revision and emits a context delta plus `stage_pass_ref` before the next owner runs.
+
 ## Detail Map
 
 | Need | Read |
@@ -23,16 +25,12 @@ Keep `AGENTS.md` compact and route detailed work here.
 | Full index | `${CODEX_HOME}/agent-architecture/AGENT-ARCHITECTURE.md` |
 | Runtime order | `${CODEX_HOME}/agent-architecture/09-runtime-orchestration-steps.md` |
 | Context ledger and planning | `${CODEX_HOME}/agent-architecture/02-context-planning.md` |
-| Worker specialist materialization | `${CODEX_HOME}/agent-architecture/03-worker-routing.md` |
-| Review distribution and review specialists | `${CODEX_HOME}/agent-architecture/04-aggregation-review.md` |
+| Worker specialist materialization | `${CODEX_HOME}/agent-architecture/03-worker-materialization.md` |
+| Review distribution and review specialists | `${CODEX_HOME}/agent-architecture/04-review-flow.md` |
 | Feedbackgate | `${CODEX_HOME}/agent-architecture/05-feedback-lifecycle.md` |
 | Contracts and ledgers | `${CODEX_HOME}/agent-architecture/07-contracts-ledgers.md` |
-| Validation | `${CODEX_HOME}/agent-architecture/08-quality-evals.md` |
+| MCP validation | `${CODEX_HOME}/agent-architecture/08-quality-evals.md` |
 
-## Skill Script Boundary
+## MCP Validation Boundary
 
-Each mandatory stage skill owns stage-local scripts under `${CODEX_HOME}/skills/<skill>/scripts/`. Shared global validators stay under `${CODEX_HOME}/agent-architecture/`.
-
-## Validation Hook
-
-If this area changes architecture docs, runtime prompts, validator logic, stage skills, or detects architecture drift, emit `architecture_validation_required=true`.
+Runtime validation is API-based: each mandatory stage skill calls `validate_context_revision`, `validate_stage_packet`, and `validate_tool_sequence` through localhost `codex-context-ledger`. Static repository scripts and repository-side wrappers are not part of the architecture gate.

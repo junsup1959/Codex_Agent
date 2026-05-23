@@ -3,6 +3,7 @@ from __future__ import annotations
 import unittest
 
 from context_ledger_mcp.ledger import ContextLedger
+from context_ledger_mcp.validation import validate_stage_packet, validate_tool_sequence
 
 
 class ContextLedgerTests(unittest.TestCase):
@@ -52,7 +53,7 @@ class ContextLedgerTests(unittest.TestCase):
                 evidence={"plan_ref": "docs/plan.md"},
                 context_revision=1,
             )
-            ledger.set_role_pass_readiness("run-1", "worker-router", True, 1)
+            ledger.set_role_pass_readiness("run-1", "worker", True, 1)
             ledger.mark_stale("run-1", "old-context", "superseded", 1)
             ledger.record_mcp_quiescence(
                 "run-1",
@@ -66,6 +67,7 @@ class ContextLedgerTests(unittest.TestCase):
             self.assertEqual(snapshot["stage_passes"][0]["stage_name"], "task-planner")
             self.assertTrue(snapshot["readiness_flags"][0]["ready"])
             self.assertEqual(snapshot["stale_markers"][0]["target_ref"], "old-context")
+            self.assertEqual(snapshot["tool_call_events"], [])
 
     def test_write_context_rejects_stale_expected_revision(self):
         from tempfile import TemporaryDirectory
@@ -77,6 +79,87 @@ class ContextLedgerTests(unittest.TestCase):
 
             with self.assertRaisesRegex(ValueError, "stale context revision"):
                 ledger.write_context_packet("run-1", {"approved_facts": ["late"]}, expected_revision=0)
+
+    def test_validate_stage_packet_api_contract(self):
+        packet = {
+            "stage_name": "task-planner",
+            "context_packet_version": 1,
+            "consumed_context_revision": 2,
+            "context_delta": {"approved_facts": ["planned"]},
+            "new_artifact_refs": ["artifact:plan"],
+            "new_evidence_refs": ["evidence:plan"],
+            "stage_pass_ref": "stage_pass:task-planner:1",
+            "next_owner": "worker",
+            "execution_plan": {"lanes": []},
+        }
+        result = validate_stage_packet("task-planner", packet, current_revision=2)
+        self.assertTrue(result["valid"], result)
+
+        stale = validate_stage_packet("task-planner", packet, current_revision=3)
+        self.assertFalse(stale["valid"])
+        self.assertEqual(stale["errors"][0]["code"], "barrier.stale_revision")
+
+    def test_worker_handoff_requires_spawn_and_wait_evidence(self):
+        valid_packet = {
+            "stage_name": "worker",
+            "context_packet_version": 1,
+            "consumed_context_revision": 3,
+            "context_delta": {"artifact_inventory": ["artifact:worker"]},
+            "new_artifact_refs": ["artifact:worker"],
+            "new_evidence_refs": ["evidence:worker"],
+            "stage_pass_ref": "stage_pass:worker:1",
+            "next_owner": "review-distributor",
+            "worker_handoff_results": [
+                {
+                    "lane_id": "worker-1",
+                    "status": "returned",
+                    "spawn_receipt_ref": "spawn:worker-1",
+                    "agent_id": "agent-1",
+                    "wait_agent_evidence": {"status": "completed"},
+                }
+            ],
+        }
+        self.assertTrue(validate_stage_packet("worker", valid_packet, current_revision=3)["valid"])
+
+        invalid_packet = {
+            **valid_packet,
+            "worker_handoff_results": [{"lane_id": "worker-1", "status": "returned"}],
+        }
+        invalid = validate_stage_packet("worker", invalid_packet, current_revision=3)
+        self.assertFalse(invalid["valid"])
+        self.assertEqual(
+            {item["code"] for item in invalid["errors"]},
+            {"handoff.spawn_receipt_ref", "handoff.agent_id", "handoff.wait_agent_evidence"},
+        )
+
+    def test_validates_tool_sequence(self):
+        observed = [
+            "read_context_packet",
+            "validate_context_revision",
+            "append_stage_pass",
+            "validate_stage_packet",
+            "write_context_packet",
+            "record_mcp_quiescence",
+            "validate_tool_sequence",
+        ]
+        valid = validate_tool_sequence("task-planner", observed)
+        self.assertTrue(valid["valid"], valid)
+
+        invalid = validate_tool_sequence("task-planner", ["read_context_packet", "write_context_packet"])
+        self.assertFalse(invalid["valid"])
+        self.assertEqual(invalid["errors"][0]["code"], "sequence.incomplete_or_out_of_order")
+
+    def test_records_tool_calls(self):
+        from tempfile import TemporaryDirectory
+
+        with TemporaryDirectory() as temp_dir:
+            ledger = ContextLedger(f"{temp_dir}/ledger.sqlite")
+            ledger.initialize_run("run-1", "test goal")
+            ledger.record_tool_call("run-1", "task-planner", "read_context_packet")
+            ledger.record_tool_call("run-1", "task-planner", "validate_context_revision")
+
+            calls = ledger.list_tool_calls("run-1", "task-planner")
+            self.assertEqual([item["tool_name"] for item in calls], ["read_context_packet", "validate_context_revision"])
 
 
 if __name__ == "__main__":

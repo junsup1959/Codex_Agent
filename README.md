@@ -1,29 +1,34 @@
-# Codex\_Agent
+# Codex Agent Architecture
 
-Codex 에이전트 아키텍처
+전역 Codex Agents 구조를 프로젝트에 반영하기 위한 작업 영역이다. 현재 기준은 repository-side script가 아니라 `codex-context-ledger` MCP tool 호출 순서다.
 
-## Agent Sources \& Attribution
+## Current Flow
 
-* This project directly uses and adapts subagent definitions from the following repository  MIT license:
-* https://github.com/VoltAgent/awesome-codex-subagents
+```text
+orchestrator -> context-ledger -> task-planner -> worker -> review-distributor -> review -> feedbackgate
+```
 
+- `orchestrator`, `context-ledger`, `task-planner`, `worker`, `review-distributor`, `review`, `feedbackgate`는 stage skill 기준으로 동작한다.
+- physical spawn은 specialist worker와 specialist review 단계에서만 사용한다.
+- 각 stage는 `codex-context-ledger` MCP의 `validate_context_revision`, `validate_stage_packet`, `validate_tool_sequence` 결과로 handoff 가능 여부를 증명한다.
+- static script나 외부 wrapper는 런타임 gate로 사용하지 않는다.
 
+## Key Paths
+
+- Global pointer: `C:\Users\junsu\.codex\AGENTS.md`
+- Global architecture docs: `C:\Users\junsu\.codex\agent-architecture\`
+- Project architecture mirror: `.\agent-architecture\`
+- Global skills: `C:\Users\junsu\.codex\skills\`
+- Project skills mirror: `.\skills\`
+- Context Ledger MCP: `C:\project\mcp\context-ledger`
 
 ## MCP
 
-* \[sequentialthinking] Docker MCP ToolKit sequentialthinking
-* [context-ledger](./mcp/context-ledger/README.md)
+- Docker MCP `sequentialthinking` may be used as supporting reasoning evidence where required by a skill.
+- [`context-ledger`](./mcp/context-ledger/README.md) documents the localhost MCP tool sequence and stage validation API.
 
-## Documentation
+## Agent Sources & Attribution
 
-Detailed architecture and runtime documentation:
+This project directly uses and adapts subagent definitions from the MIT-licensed repository:
 
-* [00-문서-지도.md](./00-문서-지도.md)
-* [01-소스-계층과-권한.md](./01-소스-계층과-권한.md)
-* [02-런타임-오케스트레이션-절차.md](./02-런타임-오케스트레이션-절차.md)
-* [03-스테이지-스킬과-contract.md](./03-스테이지-스킬과-contract.md)
-* [04-MCP-컨텍스트-원장.md](./04-MCP-컨텍스트-원장.md)
-* [05-라우터-디스트리뷰터-물리-에이전트.md](./05-라우터-디스트리뷰터-물리-에이전트.md)
-* [06-검증-훅-피드백-게이트.md](./06-검증-훅-피드백-게이트.md)
-* [07-운영-플레이북.md](./07-운영-플레이북.md)
-
+- https://github.com/VoltAgent/awesome-codex-subagents

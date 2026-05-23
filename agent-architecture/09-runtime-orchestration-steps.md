@@ -14,6 +14,24 @@ This is the mandatory sequence for `architecture_required=true` work.
 4. Activate `$orchestrator`; create `run_id`, `loop_id`, scope, success criteria, and `orchestration_request`.
 5. Activate `$context-ledger`; initialize/read/update `codex-context-ledger` and emit `context_packet`.
 
+## Context Ledger Barrier
+
+`context_ledger_barrier_required=true`.
+
+Every mandatory stage must:
+
+1. Call `$context-ledger` to `read_context_packet`.
+2. Call `validate_context_revision` for `consumed_context_revision`.
+3. Check `role_pass_readiness.<stage>=true`.
+4. Refuse stale blockers instead of acting from chat memory.
+5. Call `append_stage_pass` and use its `id` to set `stage_pass_ref`.
+6. Emit `context_packet_version`, `context_delta`, `new_artifact_refs`, and `new_evidence_refs`.
+7. Call `validate_stage_packet`; it must return `valid=true`.
+8. Call `write_context_packet` with `expected_revision=consumed_context_revision`.
+9. Call `record_mcp_quiescence`.
+10. Call `validate_tool_sequence`; it must return `valid=true`.
+11. Call `mark_stale` for superseded artifacts or assumptions when needed.
+
 ## Control Loop
 
 1. `$orchestrator` emits `orchestration_request` with `next_owner="context-ledger"`.
@@ -22,7 +40,7 @@ This is the mandatory sequence for `architecture_required=true` work.
 4. `$worker` enumerates `${CODEX_HOME}/agents/<category>/*.toml`, selects concrete specialist workers, calls `spawn_agent`, records `active_passes`, calls `wait_agent`, and returns worker `handoff_result` evidence plus missing-lane classifications.
 5. `$review-distributor` reads worker evidence, determines required review axes, enumerates review-capable specialists, and emits a bounded `review_plan`.
 6. `$review` materializes specialist reviews with `spawn_agent`, records wait handles, calls `wait_agent`, and returns review `handoff_result` values, waivers, and coverage.
-7. `$feedbackgate` judges worker/review evidence, validators, MCP/tool cleanup, and risk. It either allows final output or returns bounded feedback to `$orchestrator`.
+7. `$feedbackgate` judges worker/review evidence, MCP validation results, MCP/tool cleanup, and risk. It either allows final output or returns bounded feedback to `$orchestrator`.
 
 ## Physical Specialist Rules
 
@@ -40,13 +58,8 @@ This is the mandatory sequence for `architecture_required=true` work.
 
 ## Optional Memory
 
-`$docker-memory` may help with durable cross-run observations. It is optional and does not replace `codex-context-ledger`, validators, specialist review evidence, or `$feedbackgate`.
+`$docker-memory` may help with durable cross-run observations. It is optional and does not replace `codex-context-ledger`, MCP validation evidence, specialist review evidence, or `$feedbackgate`.
 
-## Validation Hook
+## MCP Runtime Validation
 
-If this area changes architecture docs, runtime prompts, validator logic, stage skills, or detects architecture drift, emit `architecture_validation_required=true`. Run:
-
-```powershell
-python "$env:CODEX_HOME/agent-architecture/validate-skill-contracts.py"
-python "$env:CODEX_HOME/agent-architecture/validate-agent-architecture.py"
-```
+No repository-side script validates the runtime. The mandatory proof is the ordered MCP tool return sequence for each stage.

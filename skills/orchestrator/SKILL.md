@@ -5,39 +5,40 @@ description: Execute the global Codex Orchestrator stage as a main-agent skill. 
 
 # Orchestrator
 
-Use this skill at the start of architecture-required work or when `$feedbackgate` restarts the loop. The main agent performs this stage locally and records it as `stage_execution_mode=main_agent_role_pass`.
+Use this skill first for `architecture_required=true` work, and again when `$feedbackgate` returns bounded feedback.
 
-## Contract Gate
+## MCP Tool Sequence
 
-Before running this skill, read the adjacent `contract.json`. Treat `input_artifacts`, `output_artifacts`, `forbidden_outputs`, `required_evidence`, and `source_docs` as the local checklist. Load the listed `${CODEX_HOME}/agent-architecture/<source_doc>` files before emitting the stage artifact. Prefer `scripts/check_orchestration_request.py` before handoff. If this skill, its contract, scripts, or source docs change, run `python ${CODEX_HOME}/agent-architecture/validate-skill-contracts.py`.
+Call `codex-context-ledger` tools in this exact logical order. Pass `stage_name="orchestrator"` on every call that accepts it.
 
-## Inputs
+1. `initialize_run(run_id, goal, metadata, stage_name)`
+2. `read_context_packet(run_id, stage_name)`
+3. `validate_context_revision(run_id, context_revision=<read.context_revision>, stage_name)`
+4. `append_stage_pass(run_id, stage_name, stage_execution_mode="main_agent_role_pass", evidence, context_revision=<read.context_revision>)`
+5. Build `orchestration_request` with `stage_pass_ref="stage_pass:orchestrator:<append.id>"`.
+6. `validate_stage_packet(run_id, stage_name, packet=<stage_packet>)`
+7. `write_context_packet(run_id, packet=<context_delta_applied_packet>, expected_revision=<read.context_revision>, stage_name)`
+8. `record_mcp_quiescence(run_id, stage_name, snapshot)`
+9. `validate_tool_sequence(run_id, stage_name)`
 
-Read these before emitting an orchestration request:
+## Required Return Values
 
-- user goal and latest user message
-- direct-answer exception status
-- allowed scope and explicit exclusions
-- known constraints, blockers, risk flags, and success criteria
-- latest feedback or loop carryover when resuming
-- `${CODEX_HOME}/agent-architecture/00-canonical-map.md`
-- `${CODEX_HOME}/agent-architecture/01-harness-layer.md`
-- `${CODEX_HOME}/agent-architecture/07-contracts-ledgers.md`
-- `${CODEX_HOME}/agent-architecture/09-runtime-orchestration-steps.md`
+Return only after these API results are present:
 
-## Workflow
+- `read.context_revision` as `consumed_context_revision`
+- `validate_context_revision.valid=true`
+- `append.id` as `stage_pass_ref`
+- `validate_stage_packet.valid=true`
+- `write.context_revision` as the new `context_revision`
+- `validate_tool_sequence.valid=true`
+- `mcp_quiescence_snapshot.open_mcp_process_count=0`
 
-1. Classify the request as direct-answer or `architecture_required=true`.
-2. For architecture-required work, assign `run_id`, `loop_id`, `loop_attempt`, and default `fanout_budget`.
-3. Use available MCP before substantive work; record successful evidence or `mcp_usage_blocked=true`.
-4. Define allowed scope, exclusions, success criteria, risk flags, and feedback re-entry.
-5. Preserve `loop_carryover` exactly when feedback restarted the loop.
-6. Return exactly one canonical `orchestration_request` branch with `next_owner="context-ledger"`.
+## Output
+
+Emit one `orchestration_request` with scope, exclusions, success criteria, risk flags, feedback carryover, `context_delta`, artifact/evidence refs, and `next_owner="context-ledger"`.
 
 ## Hard Rules
 
-- Do not emit `context_packet`, `execution_plan`, `launch_manifest`, `aggregation_packet`, or `judgment_envelope`.
 - Do not spawn control-stage agents.
-- Do not widen feedback scope.
-- Do not claim final readiness.
-- Include `mcp_quiescence_snapshot` and `contract_provenance` when the surrounding architecture contract requires them.
+- Do not emit plan, worker result, review result, or final judgment.
+- Do not proceed if MCP API validation fails.

@@ -5,38 +5,36 @@ description: Execute the global Codex Task Planner stage as a main-agent skill. 
 
 # Task Planner
 
-Use this skill after `$context-ledger` emits a valid `context_packet`. The main agent performs the planner stage locally and records it as `stage_execution_mode=main_agent_role_pass`.
+Use this skill after `$context-ledger` emits a current `context_packet`.
 
-## Contract Gate
+## MCP Tool Sequence
 
-Before running this skill, read the adjacent `contract.json`. Treat `input_artifacts`, `output_artifacts`, `forbidden_outputs`, `required_evidence`, and `source_docs` as the local checklist. Load the listed `${CODEX_HOME}/agent-architecture/<source_doc>` files before emitting the stage artifact. Prefer `scripts/check_execution_plan.py` before handoff. If this skill, its contract, scripts, or source docs change, run `python ${CODEX_HOME}/agent-architecture/validate-skill-contracts.py`.
+Call these tools in order with `stage_name="task-planner"` where accepted.
 
-## Inputs
+1. `read_context_packet(run_id, stage_name)`
+2. `validate_context_revision(run_id, context_revision=<read.context_revision>, stage_name)`
+3. `append_stage_pass(run_id, stage_name, stage_execution_mode="main_agent_role_pass", evidence, context_revision=<read.context_revision>)`
+4. Build `execution_plan` with `stage_pass_ref="stage_pass:task-planner:<append.id>"`.
+5. `validate_stage_packet(run_id, stage_name, packet=<stage_packet>)`
+6. `write_context_packet(run_id, packet=<context_delta_applied_packet>, expected_revision=<read.context_revision>, stage_name)`
+7. `record_mcp_quiescence(run_id, stage_name, snapshot)`
+8. `validate_tool_sequence(run_id, stage_name)`
 
-Read these before planning:
+## Required Return Values
 
-- current `context_packet`
-- `context_authority_ref`, `context_packet_version`, and `context_revision`
-- `role_pass_readiness`
-- accepted evidence, constraints, stale markers, and artifact inventory
-- `${CODEX_HOME}/agent-architecture/02-context-planning.md`
-- `${CODEX_HOME}/agent-architecture/03-worker-routing.md`
-- `${CODEX_HOME}/agent-architecture/06-agent-roster-models.md`
-- `${CODEX_HOME}/agent-architecture/07-contracts-ledgers.md`
-- `${CODEX_HOME}/agent-architecture/09-runtime-orchestration-steps.md`
+- `read.context_packet.role_pass_readiness.task-planner=true`
+- `validate_context_revision.valid=true`
+- `append.id` converted to `stage_pass_ref`
+- `validate_stage_packet.valid=true`
+- `write.context_revision` as the new current revision
+- `validate_tool_sequence.valid=true`
 
-## Workflow
+## Output
 
-1. Confirm `role_pass_readiness` allows `task-planner`.
-2. Reject stale or missing `context_revision`; request context refresh instead of planning from chat memory.
-3. Convert success criteria into bounded executable lanes.
-4. Define lane ownership, file scope, merge point, expected artifacts, validation prompt, review hints, and direct blockers.
-5. Set `fanout_budget`; coalesce lanes when budget would be exceeded.
-6. Return exactly one canonical `execution_plan` branch with `next_owner="worker"`.
+Emit one bounded `execution_plan` with worker lanes, file scope, merge points, expected artifacts, validation prompts, review hints, fanout budget, `context_delta`, and `next_owner="worker"`.
 
 ## Hard Rules
 
-- Do not select final worker agents from memory; `$worker` must enumerate the concrete TOML specialist list before spawning.
-- Do not spawn workers, reviewers, or control-stage agents.
-- Do not emit review results, feedback judgments, or final output.
-- Do not hide MCP/tool gaps; carry them into lane validation evidence or unresolved assumptions.
+- Do not spawn workers or reviewers.
+- Do not select worker roles from memory; `$worker` must enumerate the TOML catalog.
+- Do not proceed if ledger revision or API validation fails.
