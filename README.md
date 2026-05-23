@@ -15,10 +15,10 @@ orchestrator -> context-ledger -> task-planner -> worker -> review-distributor -
 
 ## Key Paths
 
-- Global pointer: `C:\Users\junsu\.codex\AGENTS.md`
-- Global architecture docs: `C:\Users\junsu\.codex\agent-architecture\`
+- Global pointer: `${CODEX_HOME}\AGENTS.md`
+- Global architecture docs: `${CODEX_HOME}\agent-architecture\`
 - Project architecture mirror: `.\agent-architecture\`
-- Global skills: `C:\Users\junsu\.codex\skills\`
+- Global skills: `${CODEX_HOME}\skills\`
 - Project skills mirror: `.\skills\`
 - Context Ledger MCP: `C:\project\mcp\context-ledger`
 
