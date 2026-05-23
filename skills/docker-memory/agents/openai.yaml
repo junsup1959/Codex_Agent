@@ -1,0 +1,10 @@
+interface:
+  display_name: "Docker Memory"
+  short_description: "Optional Docker MCP Memory helper"
+  default_prompt: "Use $docker-memory to search or record durable observations with Docker MCP Memory."
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "MCP_DOCKER"
+      description: "Docker MCP Gateway with the memory server activated when needed"
+

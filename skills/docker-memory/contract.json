@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_name": "docker-memory",
+  "activation_ref": "$docker-memory",
+  "mandatory_for_architecture_required": false,
+  "stage_owner": "optional-helper",
+  "stage_execution_mode": "optional_mcp_helper",
+  "purpose": "Use Docker MCP Memory as an optional knowledge graph helper when durable cross-run context is useful.",
+  "input_artifacts": ["narrow_memory_question"],
+  "output_artifacts": ["memory_findings_or_observation_refs"],
+  "forbidden_outputs": ["mandatory_gate_evidence", "runtime_state_authority", "secret_storage"],
+  "required_evidence": ["memory_search_before_write", "current_state_verification_boundary"],
+  "source_docs": ["09-runtime-orchestration-steps.md"]
+}

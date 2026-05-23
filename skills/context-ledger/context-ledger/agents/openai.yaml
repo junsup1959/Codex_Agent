@@ -1,0 +1,4 @@
+interface:
+  display_name: "Context Ledger"
+  short_description: "Mandatory MCP-backed run context sync"
+  default_prompt: "Use $context-ledger to sync approved run context through codex-context-ledger before planning."

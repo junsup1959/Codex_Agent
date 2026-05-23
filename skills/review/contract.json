@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_name": "review",
+  "activation_ref": "$review",
+  "mandatory_for_architecture_required": true,
+  "stage_owner": "review",
+  "stage_execution_mode": "main_agent_role_pass",
+  "purpose": "Materialize review-distributor lanes into spawned specialist reviewer agents and waited review evidence.",
+  "input_artifacts": ["review_plan", "worker_handoff_results", "active_passes", "fanout_budget"],
+  "output_artifacts": ["review_handoff_results", "review_waivers", "review_coverage"],
+  "forbidden_outputs": ["execution_plan", "worker_handoff_results", "judgment_envelope", "final_output"],
+  "required_evidence": ["specialist_catalog_enumeration", "spawn_receipt_ref", "wait_agent_evidence", "review_coverage_contract", "mcp_quiescence_snapshot"],
+  "source_docs": ["04-aggregation-review.md", "06-agent-roster-models.md", "07-contracts-ledgers.md", "09-runtime-orchestration-steps.md"]
+}

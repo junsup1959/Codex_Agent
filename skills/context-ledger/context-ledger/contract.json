@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_name": "context-ledger",
+  "activation_ref": "$context-ledger",
+  "mandatory_for_architecture_required": true,
+  "stage_owner": "context-ledger",
+  "stage_execution_mode": "main_agent_role_pass",
+  "purpose": "Synchronize run-local context through the codex-context-ledger MCP before task planning.",
+  "input_artifacts": ["orchestration_request", "latest_context_packet"],
+  "output_artifacts": ["context_packet"],
+  "forbidden_outputs": ["execution_plan", "launch_manifest", "aggregation_packet", "judgment_envelope", "final_output"],
+  "required_evidence": ["codex_context_ledger_mcp_evidence", "context_revision", "role_pass_readiness", "mcp_quiescence_snapshot"],
+  "source_docs": ["02-context-planning.md", "07-contracts-ledgers.md", "09-runtime-orchestration-steps.md"]
+}

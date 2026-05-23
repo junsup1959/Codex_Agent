@@ -5,10 +5,10 @@
   "mandatory_for_architecture_required": true,
   "stage_owner": "task-planner",
   "stage_execution_mode": "main_agent_role_pass",
-  "purpose": "Convert the current context_packet into a bounded execution_plan.",
+  "purpose": "Convert the current context_packet into a bounded execution_plan for the worker skill.",
   "input_artifacts": ["orchestration_request", "context_packet"],
   "output_artifacts": ["execution_plan"],
-  "forbidden_outputs": ["launch_manifest", "aggregation_packet", "judgment_envelope", "final_output"],
+  "forbidden_outputs": ["worker_handoff_results", "review_handoff_results", "judgment_envelope", "final_output"],
   "required_evidence": ["context_revision", "role_pass_readiness", "mcp_quiescence_snapshot", "contract_provenance"],
   "source_docs": ["02-context-planning.md", "07-contracts-ledgers.md", "09-runtime-orchestration-steps.md"]
 }

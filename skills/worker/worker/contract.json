@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_name": "worker",
+  "activation_ref": "$worker",
+  "mandatory_for_architecture_required": true,
+  "stage_owner": "worker",
+  "stage_execution_mode": "main_agent_role_pass",
+  "purpose": "Materialize task-planner lanes into spawned specialist worker agents and waited worker evidence.",
+  "input_artifacts": ["execution_plan", "context_packet", "fanout_budget"],
+  "output_artifacts": ["worker_handoff_results", "active_passes", "missing_lane_classifications"],
+  "forbidden_outputs": ["review_handoff_results", "judgment_envelope", "final_output"],
+  "required_evidence": ["specialist_catalog_enumeration", "spawn_receipt_ref", "wait_agent_evidence", "lane_status_classification", "mcp_quiescence_snapshot"],
+  "source_docs": ["03-worker-routing.md", "06-agent-roster-models.md", "07-contracts-ledgers.md", "09-runtime-orchestration-steps.md"]
+}

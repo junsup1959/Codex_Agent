@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_name": "feedbackgate",
+  "activation_ref": "$feedbackgate",
+  "mandatory_for_architecture_required": true,
+  "stage_owner": "feedbackgate",
+  "stage_execution_mode": "main_agent_role_pass",
+  "purpose": "Judge specialist worker and review evidence, then allow final output or return bounded feedback to orchestrator.",
+  "input_artifacts": ["worker_handoff_results", "review_handoff_results", "review_waivers", "stage_passes", "active_passes"],
+  "output_artifacts": ["judgment_envelope", "feedback_gate_evidence"],
+  "forbidden_outputs": ["launch_manifest", "active_passes", "unvalidated_final_output"],
+  "required_evidence": ["review_input_refs_or_waivers", "feedback_gate_evidence", "stage_pass_ref", "mcp_quiescence_snapshot"],
+  "source_docs": ["05-feedback-lifecycle.md", "07-contracts-ledgers.md", "08-quality-evals.md", "09-runtime-orchestration-steps.md"]
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Review"
+  short_description: "Spawn and wait specialist review lanes"
+  default_prompt: "Use $review to materialize bounded specialist reviewer agents from the review plan."

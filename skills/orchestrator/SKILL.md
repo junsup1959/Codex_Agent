@@ -1,15 +1,15 @@
 ---
 name: orchestrator
-description: Execute the global Codex Orchestrator stage as a main-agent skill. Use when architecture-required work must be classified, scoped, assigned run identifiers, and converted into a canonical orchestration_request before context sync.
+description: Execute the global Codex Orchestrator stage as a main-agent skill. Use when architecture-required work must be classified, scoped, assigned run identifiers, and converted into a canonical orchestration_request before context-ledger sync.
 ---
 
 # Orchestrator
 
-Use this skill at the start of architecture-required work or when feedback restarts the loop. The main agent performs this stage locally and records it as `stage_execution_mode=main_agent_role_pass`.
+Use this skill at the start of architecture-required work or when `$feedbackgate` restarts the loop. The main agent performs this stage locally and records it as `stage_execution_mode=main_agent_role_pass`.
 
 ## Contract Gate
 
-Before running this skill, read the adjacent `contract.json`. Treat `input_artifacts`, `output_artifacts`, `forbidden_outputs`, `required_evidence`, and `source_docs` as the local checklist. Load the listed `${CODEX_HOME}/agent-architecture/<source_doc>` files before emitting the stage artifact. If this skill, its contract, or its source docs change, run `python ${CODEX_HOME}/agent-architecture/validate-skill-contracts.py` before handoff.
+Before running this skill, read the adjacent `contract.json`. Treat `input_artifacts`, `output_artifacts`, `forbidden_outputs`, `required_evidence`, and `source_docs` as the local checklist. Load the listed `${CODEX_HOME}/agent-architecture/<source_doc>` files before emitting the stage artifact. Prefer `scripts/check_orchestration_request.py` before handoff. If this skill, its contract, scripts, or source docs change, run `python ${CODEX_HOME}/agent-architecture/validate-skill-contracts.py`.
 
 ## Inputs
 
@@ -32,7 +32,7 @@ Read these before emitting an orchestration request:
 3. Use available MCP before substantive work; record successful evidence or `mcp_usage_blocked=true`.
 4. Define allowed scope, exclusions, success criteria, risk flags, and feedback re-entry.
 5. Preserve `loop_carryover` exactly when feedback restarted the loop.
-6. Return exactly one canonical `orchestration_request` branch with `next_owner="context-manager"`.
+6. Return exactly one canonical `orchestration_request` branch with `next_owner="context-ledger"`.
 
 ## Hard Rules
 
