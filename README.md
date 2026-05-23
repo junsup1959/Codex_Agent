@@ -1,6 +1,6 @@
-# Codex Agent Architecture
+# Codex Agent Architecture Workspace
 
-전역 Codex Agents 구조를 프로젝트에 반영하기 위한 작업 영역이다. 현재 기준은 repository-side script가 아니라 `codex-context-ledger` MCP tool 호출 순서다.
+This workspace mirrors the global Codex agent architecture so changes can be reviewed before they are copied into `${CODEX_HOME}`.
 
 ## Current Flow
 
@@ -8,10 +8,11 @@
 orchestrator -> context-ledger -> task-planner -> worker -> review-distributor -> review -> feedbackgate
 ```
 
-- `orchestrator`, `context-ledger`, `task-planner`, `worker`, `review-distributor`, `review`, `feedbackgate`는 stage skill 기준으로 동작한다.
-- physical spawn은 specialist worker와 specialist review 단계에서만 사용한다.
-- 각 stage는 `codex-context-ledger` MCP의 `validate_context_revision`, `validate_stage_packet`, `validate_tool_sequence` 결과로 handoff 가능 여부를 증명한다.
-- static script나 외부 wrapper는 런타임 gate로 사용하지 않는다.
+- `orchestrator`, `context-ledger`, `task-planner`, `worker`, `review-distributor`, `review`, and `feedbackgate` are stage skills.
+- The mandatory `context-ledger` stage runs between `$orchestrator` and `$task-planner`, even when user-facing shorthand omits it.
+- Physical `spawn_agent` / `wait_agent` usage is reserved for specialist worker and specialist review stages.
+- Every mandatory stage proves handoff through `codex-context-ledger` MCP tool results, especially `validate_context_revision`, `validate_stage_packet`, and `validate_tool_sequence`.
+- Static scripts may support local checks, but they are not runtime gates.
 
 ## Key Paths
 
@@ -20,12 +21,23 @@ orchestrator -> context-ledger -> task-planner -> worker -> review-distributor -
 - Project architecture mirror: `.\agent-architecture\`
 - Global skills: `${CODEX_HOME}\skills\`
 - Project skills mirror: `.\skills\`
-- Context Ledger MCP: `C:\project\mcp\context-ledger`
+- Context Ledger MCP mirror: `.\mcp\context-ledger\`
 
 ## MCP
 
 - Docker MCP `sequentialthinking` may be used as supporting reasoning evidence where required by a skill.
 - [`context-ledger`](./mcp/context-ledger/README.md) documents the localhost MCP tool sequence and stage validation API.
+- Use `scripts/ensure-mcp-tool-approvals.ps1` only to synchronize Codex MCP tool approval blocks in `${CODEX_HOME}\config.toml`; it is not runtime validation evidence.
+
+## Skill Mirror Policy
+
+The repository `skills\` tree is a mirror, not the sole source of truth. Before deleting a mirrored skill directory, classify the intended state:
+
+- `global-only`: remove the repository mirror, keep `${CODEX_HOME}\skills\<name>` installed.
+- `repo-mirror`: keep the repository copy aligned with the global skill.
+- `removed-everywhere`: remove both the repository mirror and the global skill intentionally.
+
+For skill deletion reviews, record which classification applies and verify references with `rg <skill-name> .` plus a direct `${CODEX_HOME}\skills\<name>` existence check.
 
 ## Agent Sources & Attribution
 

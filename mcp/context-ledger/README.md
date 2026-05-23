@@ -15,7 +15,7 @@ from mcp.server.fastmcp import FastMCP
 ## Run
 
 ```powershell
-cd C:\project\mcp\context-ledger
+cd .\mcp\context-ledger
 uv run codex-context-ledger
 ```
 
@@ -28,7 +28,7 @@ The default transport is local streamable HTTP at `http://127.0.0.1:8765/mcp`.
 By default the database is created at `data/context-ledger.sqlite`. Override it with:
 
 ```powershell
-$env:CODEX_CONTEXT_LEDGER_DB='C:\Users\junsu\.codex\state\context-ledger.sqlite'
+$env:CODEX_CONTEXT_LEDGER_DB=(Join-Path $env:CODEX_HOME 'state\context-ledger.sqlite')
 uv run codex-context-ledger
 ```
 
