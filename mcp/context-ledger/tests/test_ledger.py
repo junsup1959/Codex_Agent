@@ -290,6 +290,54 @@ class ContextLedgerTests(unittest.TestCase):
             },
         )
 
+    def test_completion_required_rejects_malformed_feedbackgate_evidence_shapes(self):
+        cases = [
+            (
+                {
+                    "stage_name": "feedbackgate",
+                    "judgment_envelope": {"feedback_required": False},
+                    "feedback_gate_evidence": "not-a-dict",
+                    "review_input_refs": ["review:1"],
+                    "stage_passes": ["stage_pass:review:1"],
+                    "active_passes": ["stage_pass:worker:1"],
+                },
+                {"completion.feedback_gate_evidence.shape"},
+            ),
+            (
+                {
+                    "stage_name": "feedbackgate",
+                    "judgment_envelope": {"feedback_required": False},
+                    "feedback_gate_evidence": {"review_inputs_present": True},
+                    "review_input_refs": [None],
+                    "stage_passes": ["stage_pass:review:1"],
+                    "active_passes": ["stage_pass:worker:1"],
+                },
+                {"completion.review_input_refs.item", "completion.review_inputs_missing"},
+            ),
+            (
+                {
+                    "stage_name": "feedbackgate",
+                    "judgment_envelope": {"feedback_required": False},
+                    "feedback_gate_evidence": {"review_inputs_present": True},
+                    "review_input_refs": ["review:1"],
+                    "stage_passes": [None],
+                    "active_passes": [None],
+                },
+                {
+                    "completion.stage_passes.item",
+                    "completion.stage_passes_missing",
+                    "completion.active_passes.item",
+                    "completion.active_passes_missing",
+                },
+            ),
+        ]
+
+        for packet, expected_codes in cases:
+            with self.subTest(packet=packet):
+                result = validate_stage_completion("feedbackgate", packet)
+                self.assertFalse(result["valid"], result)
+                self.assertEqual({item["code"] for item in result["errors"]}, expected_codes)
+
     def test_worker_handoff_requires_spawn_and_wait_evidence(self):
         valid_packet = {
             "stage_name": "worker",
