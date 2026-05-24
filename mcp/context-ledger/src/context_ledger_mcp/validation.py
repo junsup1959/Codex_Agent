@@ -256,21 +256,28 @@ def validate_stage_completion(stage_name: str, packet: dict[str, Any]) -> dict[s
             judgment = {}
         if judgment.get("feedback_required") is False:
             waivers_valid = _validate_lane_reason_items("review_waivers", stage_packet.get("review_waivers"), error)
-            if not stage_packet.get("feedback_gate_evidence"):
-                error(
-                    "completion.feedback_gate_evidence_missing",
-                    "feedback_gate_evidence",
-                    "final readiness requires feedback gate evidence",
-                )
-            if not (_non_empty_list(stage_packet.get("review_input_refs")) or waivers_valid):
+            _validate_non_empty_dict(
+                "feedback_gate_evidence",
+                stage_packet.get("feedback_gate_evidence"),
+                "completion.feedback_gate_evidence_missing",
+                "final readiness requires feedback gate evidence",
+                error,
+            )
+            review_input_refs = stage_packet.get("review_input_refs")
+            review_refs_valid = (
+                _validate_non_empty_string_list("review_input_refs", review_input_refs, error)
+                if review_input_refs is not None
+                else False
+            )
+            if not (review_refs_valid or waivers_valid):
                 error(
                     "completion.review_inputs_missing",
                     "review_input_refs",
                     "final readiness requires reviewer input refs or explicit review waivers",
                 )
-            if not _non_empty_list(stage_packet.get("stage_passes")):
+            if not _validate_non_empty_string_list("stage_passes", stage_packet.get("stage_passes"), error):
                 error("completion.stage_passes_missing", "stage_passes", "final readiness requires stage pass evidence")
-            if not _non_empty_list(stage_packet.get("active_passes")):
+            if not _validate_non_empty_string_list("active_passes", stage_packet.get("active_passes"), error):
                 error("completion.active_passes_missing", "active_passes", "final readiness requires active pass evidence")
     elif stage_name not in STAGE_ARTIFACTS:
         error("stage.unknown", "stage_name", f"unknown stage: {stage_name}")
@@ -293,6 +300,37 @@ def _expected_next_owner(stage_name: str, packet: dict[str, Any]) -> str:
 
 def _non_empty_list(value: Any) -> bool:
     return isinstance(value, list) and len(value) > 0
+
+
+def _validate_non_empty_dict(
+    field_name: str,
+    value: Any,
+    missing_code: str,
+    missing_message: str,
+    error,
+) -> bool:
+    if value is None or value == {}:
+        error(missing_code, field_name, missing_message)
+        return False
+    if not isinstance(value, dict):
+        error(f"completion.{field_name}.shape", field_name, "must be a non-empty object")
+        return False
+    return True
+
+
+def _validate_non_empty_string_list(field_name: str, value: Any, error) -> bool:
+    if value is None or value == []:
+        return False
+    if not isinstance(value, list):
+        error(f"completion.{field_name}.shape", field_name, "must be a list")
+        return False
+
+    valid = True
+    for index, item in enumerate(value):
+        if not isinstance(item, str) or not item:
+            error(f"completion.{field_name}.item", f"{field_name}[{index}]", "must be a non-empty string")
+            valid = False
+    return valid
 
 
 def _validate_lane_reason_items(field_name: str, value: Any, error) -> bool:
