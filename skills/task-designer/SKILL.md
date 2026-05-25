@@ -56,6 +56,66 @@ Emit `task_design.md` and `task_design` with:
 - `context_delta`
 - `next_owner="task-distributor"`
 
+## Stage Packet Shape
+
+Pass this top-level wrapper to `validate_stage_packet` and `validate_task_design`; do not pass a prose-only option list or a partial `task_design`.
+
+```json
+{
+  "stage_name": "task-designer",
+  "context_packet_version": 3,
+  "consumed_context_revision": 2,
+  "stage_execution_mode": "main_agent_role_pass",
+  "stage_pass_ref": "stage_pass:task-designer:<append.id>",
+  "task_design": {
+    "problem_definition": "...",
+    "assumptions": ["..."],
+    "options": [
+      {
+        "id": "option-a",
+        "title": "...",
+        "summary": "...",
+        "fit_assessment": "...",
+        "tradeoffs": ["..."]
+      },
+      {
+        "id": "option-b",
+        "title": "...",
+        "summary": "...",
+        "fit_assessment": "...",
+        "tradeoffs": ["..."]
+      },
+      {
+        "id": "option-c",
+        "title": "...",
+        "summary": "...",
+        "fit_assessment": "...",
+        "tradeoffs": ["..."]
+      }
+    ],
+    "comparison_criteria": ["..."],
+    "selected_option_id": "option-b",
+    "selection_rationale": "...",
+    "selected_option_risks": ["..."],
+    "distribution_boundaries": ["..."],
+    "artifact_profile": {
+      "version": 1,
+      "source_stage": "task-designer",
+      "reuse_policy": "...",
+      "invalidated_by": ["..."]
+    },
+    "sequential_thinking_ref": "MCP_DOCKER.sequentialthinking:<ref>"
+  },
+  "context_delta": {},
+  "new_artifact_refs": ["task_design.md"],
+  "new_evidence_refs": [
+    "stage_pass:task-designer:<append.id>",
+    "validate_task_design:true"
+  ],
+  "next_owner": "task-distributor"
+}
+```
+
 ## Hard Rules
 
 - Do not emit `task_design`, `task_design.md`, option 1/2/3 comparisons, or a selected option unless `validate_task_design.valid=true` is present from the MCP tool call.

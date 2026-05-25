@@ -508,6 +508,25 @@ class ContextLedgerTests(unittest.TestCase):
         self.assertEqual(final_result["next_stage"], build_next_stage_guidance("final"))
         self.assertEqual(final_result["next_stage"]["required_input_artifacts"], ["judgment_envelope", "feedback_gate_evidence"])
 
+    def test_next_stage_guidance_includes_valid_packet_templates(self):
+        context_guidance = build_next_stage_guidance("context-ledger")
+        context_template = context_guidance["stage_packet_template"]
+        self.assertEqual(context_template["stage_name"], "context-ledger")
+        self.assertIn("context_packet", context_template)
+        self.assertIn("context_delta", context_template)
+        self.assertEqual(context_template["context_packet"]["next_owner"], "task-designer")
+
+        design_guidance = build_next_stage_guidance("task-designer")
+        design_template = design_guidance["stage_packet_template"]
+        self.assertEqual(design_template["stage_name"], "task-designer")
+        self.assertIn("task_design", design_template)
+        self.assertIsInstance(design_template["task_design"]["distribution_boundaries"], list)
+        self.assertEqual(design_template["task_design"]["artifact_profile"]["version"], 1)
+        for option in design_template["task_design"]["options"]:
+            self.assertIn("title", option)
+            self.assertIn("fit_assessment", option)
+            self.assertIn("tradeoffs", option)
+
     def test_minimal_packets_for_all_mandatory_stages(self):
         cases = {
             "orchestrator": {
