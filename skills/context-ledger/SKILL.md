@@ -41,6 +41,37 @@ Use `mark_stale(run_id, target_ref, reason, context_revision, stage_name)` betwe
 
 Emit one MCP-backed `context_packet` with approved facts, constraints, artifact inventory, stale markers, blockers, readiness, `context_delta`, and `next_owner="task-designer"` on normal entry. On feedback loops, preserve `task_design_reentry_decision`, write `reentry_cache`, and use `next_owner="task-distributor"` only when the decision is `reuse_task_design` or `skip_to_distribution`.
 
+## Stage Packet Shape
+
+Pass this top-level wrapper to `validate_stage_packet`; do not pass the inner `context_packet` alone.
+
+```json
+{
+  "stage_name": "context-ledger",
+  "context_packet_version": 2,
+  "consumed_context_revision": 1,
+  "stage_execution_mode": "main_agent_role_pass",
+  "stage_pass_ref": "stage_pass:context-ledger:<append.id>",
+  "context_packet": {
+    "context_packet_version": 2,
+    "source_stage": "context-ledger",
+    "consumed_context_revision": 1,
+    "stage_pass_ref": "stage_pass:context-ledger:<append.id>",
+    "approved_facts": [],
+    "constraints": [],
+    "artifact_refs": [],
+    "evidence_refs": [],
+    "role_pass_readiness": {"task-designer": true},
+    "context_delta": {},
+    "next_owner": "task-designer"
+  },
+  "context_delta": {},
+  "new_artifact_refs": [],
+  "new_evidence_refs": ["stage_pass:context-ledger:<append.id>"],
+  "next_owner": "task-designer"
+}
+```
+
 ## Hard Rules
 
 - Do not spawn a physical resident context agent.

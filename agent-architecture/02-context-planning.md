@@ -71,3 +71,7 @@ The distributor may consult the agent roster for category fit, but it does not c
 ## Required API Checks
 
 Use `validate_stage_packet` for barrier and artifact shape, `validate_task_design` for `$task-designer`, `validate_execution_plan` for `$task-distributor`, then `validate_tool_sequence` for the stage MCP call order. These checks run through the localhost `codex-context-ledger` MCP API.
+
+If a required stage-specific validator is not callable in the active session, the stage is blocked. The agent must not replace the missing validation with an informal draft, option list, recommendation, or "best effort" handoff. For `$task-designer`, missing `validate_task_design` means no `task_design` or 1/2/3 design comparison may be emitted as a completed stage artifact.
+
+`validate_stage_packet` and context packet read/write responses include `next_stage.stage_packet_template` where available. The next stage must follow that top-level wrapper shape before attempting validation; do not discover the schema by repeated failed validation calls.
