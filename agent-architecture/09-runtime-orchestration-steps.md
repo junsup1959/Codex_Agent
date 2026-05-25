@@ -1,17 +1,17 @@
 # Runtime Orchestration Steps
 
-This is the mandatory sequence for `architecture_required=true` work.
+This is the mandatory sequence after `$orchestrator` has been explicitly activated and has emitted `architecture_required=true` for the run.
 
 ## Canonical Flow
 
-`orchestrator -> context-ledger -> task-planner -> worker -> review-distributor -> review -> feedbackgate`
+`orchestrator -> context-ledger -> task-designer -> task-distributor -> worker -> review-distributor -> review -> feedbackgate`
 
 ## Startup Gate
 
-1. Classify the request. Simple direct answers may bypass the loop.
-2. For non-trivial work, set `architecture_required=true`.
-3. Use available MCP or record `mcp_usage_blocked=true`.
-4. Activate `$orchestrator`; create `run_id`, `loop_id`, scope, success criteria, and `orchestration_request`.
+1. Stay in the normal direct workflow unless the user explicitly invokes `$orchestrator`, asks to run the architecture/orchestration flow, or a current `$feedbackgate` result routes bounded feedback back to `$orchestrator`.
+2. Activate `$orchestrator`; call `MCP_DOCKER.sequentialthinking`; create `run_id`, `loop_id`, scope, success criteria, `sequential_thinking_ref` or `sequential_thinking_waiver`, and `orchestration_request`.
+3. `$orchestrator` sets `architecture_required=true` for this run.
+4. Use available MCP or record `mcp_usage_blocked=true`.
 5. Activate `$context-ledger`; initialize/read/update `codex-context-ledger` and emit `context_packet`.
 
 ## Context Ledger Barrier
@@ -35,16 +35,17 @@ Every mandatory stage must:
 ## Control Loop
 
 1. `$orchestrator` emits `orchestration_request` with `next_owner="context-ledger"`.
-2. `$context-ledger` is mandatory. It owns run-local approved facts, constraints, artifact inventory, stale markers, context revision, and role-pass readiness. It emits `context_packet` with `next_owner="task-planner"`.
-3. `$task-planner` emits an `execution_plan` with bounded worker lanes, validation prompts, review hints, and `fanout_budget`. It does not spawn.
-4. `$worker` enumerates `${CODEX_HOME}/agents/<category>/*.toml`, selects concrete specialist workers, calls `spawn_agent`, records `active_passes`, calls `wait_agent`, and returns worker `handoff_result` evidence plus missing-lane classifications.
-5. `$review-distributor` reads worker evidence, determines required review axes, enumerates review-capable specialists, and emits a bounded `review_plan`.
-6. `$review` materializes specialist reviews with `spawn_agent`, records wait handles, calls `wait_agent`, and returns review `handoff_result` values, waivers, and coverage.
-7. `$feedbackgate` judges worker/review evidence, MCP validation results, MCP/tool cleanup, and risk. It either allows final output or returns bounded feedback to `$orchestrator`.
+2. `$context-ledger` is mandatory. It owns run-local approved facts, constraints, artifact inventory, stale markers, context revision, and role-pass readiness. It normally emits `context_packet` with `next_owner="task-designer"`.
+3. `$task-designer` calls `MCP_DOCKER.sequentialthinking`, then emits `task_design.md` and `task_design` with multiple options, comparison criteria, selected option, rationale, distribution boundaries, `artifact_profile`, and `sequential_thinking_ref` or `sequential_thinking_waiver`. It does not create lanes or call agents.
+4. `$task-distributor` calls `MCP_DOCKER.sequentialthinking`, then emits `task_distribution_criteria.md` and an `execution_plan` with bounded worker lanes, dependencies, ownership, validation prompts, review hints, `fanout_budget`, `artifact_profile`, and `sequential_thinking_ref` or `sequential_thinking_waiver`. It does not spawn.
+5. `$worker` enumerates `${CODEX_HOME}/agents/<category>/*.toml`, selects concrete specialist workers, calls `spawn_agent`, records `active_passes`, calls `wait_agent`, and returns worker `handoff_result` evidence plus missing-lane classifications.
+6. `$review-distributor` reads worker evidence, calls `MCP_DOCKER.sequentialthinking`, determines required review axes, emits `review_distribution_criteria.md`, and creates a bounded `review_plan` with `artifact_profile` and `sequential_thinking_ref` or `sequential_thinking_waiver` for specialist reviewers.
+7. `$review` materializes specialist reviews with `spawn_agent`, records wait handles, calls `wait_agent`, and returns review `handoff_result` values, waivers, and coverage.
+8. `$feedbackgate` judges worker/review evidence, MCP validation results, MCP/tool cleanup, and risk. It either allows final output or returns bounded feedback to `$orchestrator` with `task_design_reentry_decision`.
 
 ## Physical Specialist Rules
 
-- Specialist workers and specialist reviews are physical spawned agents.
+- Specialist workers and specialist reviewers are physical spawned agents.
 - Every spawned child must be waited before it can feed review or feedbackgate.
 - `close_agent` is cleanup only, not result evidence.
 - Fanout defaults: max 2 worker lanes, max 2 review lanes, max 4 total child agents, max 1 same-role parallel lane, max 1 MCP-using child lane active.
@@ -54,6 +55,7 @@ Every mandatory stage must:
 - `feedback_gate_mandatory=true`.
 - Final output is forbidden while `feedback_required=true`.
 - Feedback always returns to `$orchestrator`; the next loop then runs `$context-ledger`.
+- On feedback loops, `$feedbackgate` must declare whether to `revise_task_design`, `reuse_task_design`, or `skip_to_distribution`, plus reusable/invalidated artifacts and downstream distribution actions. `$context-ledger` preserves this as `reentry_cache` and may hand off directly to `$task-distributor` only when that reentry decision is valid.
 - Repeated no-progress feedback must become user/tool/schema/doc repair, not prompt-only retries.
 
 ## Optional Memory

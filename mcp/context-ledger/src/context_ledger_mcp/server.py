@@ -9,8 +9,12 @@ from mcp.server.fastmcp import FastMCP
 
 from context_ledger_mcp.ledger import ContextLedger, LedgerError
 from context_ledger_mcp.validation import (
+    build_next_stage_guidance,
+    validate_execution_plan as validate_execution_plan_payload,
+    validate_review_plan as validate_review_plan_payload,
     validate_stage_completion as validate_stage_completion_payload,
     validate_stage_packet as validate_stage_packet_payload,
+    validate_task_design as validate_task_design_payload,
     validate_tool_sequence as validate_tool_sequence_payload,
 )
 
@@ -65,6 +69,9 @@ def read_context_packet(run_id: str, revision: int | None = None, stage_name: st
     """Read the latest or requested context packet revision."""
     try:
         result = _ok(_ledger().read_context_packet(run_id, revision))
+        context_packet = result.get("context_packet")
+        if isinstance(context_packet, dict) and context_packet.get("next_owner"):
+            result["next_stage"] = build_next_stage_guidance(context_packet["next_owner"])
         _record_tool(run_id, stage_name, "read_context_packet", {"revision": revision}, result, result.get("context_revision"))
         return result
     except Exception as exc:
@@ -81,6 +88,9 @@ def write_context_packet(
     """Append a context packet revision, optionally guarded by the current revision."""
     try:
         result = _ok(_ledger().write_context_packet(run_id, packet, expected_revision))
+        context_packet = result.get("context_packet")
+        if isinstance(context_packet, dict) and context_packet.get("next_owner"):
+            result["next_stage"] = build_next_stage_guidance(context_packet["next_owner"])
         _record_tool(run_id, stage_name, "write_context_packet", {"expected_revision": expected_revision}, result, result.get("context_revision"))
         return result
     except Exception as exc:
@@ -239,6 +249,51 @@ def validate_stage_completion(
     try:
         result = _ok(validate_stage_completion_payload(stage_name, packet))
         _record_tool(run_id, stage_name, "validate_stage_completion", None, result)
+        return result
+    except Exception as exc:
+        return _error(exc)
+
+
+@mcp.tool()
+def validate_task_design(
+    run_id: str,
+    packet: dict[str, Any],
+    stage_name: str = "task-designer",
+) -> dict[str, Any]:
+    """Validate task_design option comparison, selected option, and distribution boundaries."""
+    try:
+        result = _ok(validate_task_design_payload(packet))
+        _record_tool(run_id, stage_name, "validate_task_design", None, result)
+        return result
+    except Exception as exc:
+        return _error(exc)
+
+
+@mcp.tool()
+def validate_execution_plan(
+    run_id: str,
+    packet: dict[str, Any],
+    stage_name: str = "task-distributor",
+) -> dict[str, Any]:
+    """Validate execution_plan against distribution criteria, lane, dependency, and fanout rules."""
+    try:
+        result = _ok(validate_execution_plan_payload(packet))
+        _record_tool(run_id, stage_name, "validate_execution_plan", None, result)
+        return result
+    except Exception as exc:
+        return _error(exc)
+
+
+@mcp.tool()
+def validate_review_plan(
+    run_id: str,
+    packet: dict[str, Any],
+    stage_name: str = "review-distributor",
+) -> dict[str, Any]:
+    """Validate review_plan against review distribution criteria, coverage, and reviewer lane rules."""
+    try:
+        result = _ok(validate_review_plan_payload(packet))
+        _record_tool(run_id, stage_name, "validate_review_plan", None, result)
         return result
     except Exception as exc:
         return _error(exc)

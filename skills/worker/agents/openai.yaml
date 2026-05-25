@@ -1,4 +1,4 @@
 interface:
   display_name: "Worker"
-  short_description: "Spawn and wait specialist worker lanes"
-  default_prompt: "Use $worker to materialize bounded specialist worker agents from the task plan."
+  short_description: "Force specialist worker lanes"
+  default_prompt: "Use $worker to materialize bounded specialist worker agents from the execution plan."

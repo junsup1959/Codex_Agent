@@ -1,0 +1,5 @@
+interface:
+  display_name: "Task Designer"
+  short_description: "Design options and selected approach"
+  default_prompt: "Use $task-designer to create task_design with options, comparison, selected option, and distribution boundaries."
+

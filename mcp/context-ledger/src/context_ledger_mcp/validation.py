@@ -6,7 +6,8 @@ from typing import Any
 STAGE_ARTIFACTS = {
     "orchestrator": "orchestration_request",
     "context-ledger": "context_packet",
-    "task-planner": "execution_plan",
+    "task-designer": "task_design",
+    "task-distributor": "execution_plan",
     "worker": "worker_handoff_results",
     "review-distributor": "review_plan",
     "review": "review_handoff_results",
@@ -15,17 +16,123 @@ STAGE_ARTIFACTS = {
 
 NEXT_OWNER = {
     "orchestrator": "context-ledger",
-    "context-ledger": "task-planner",
-    "task-planner": "worker",
+    "context-ledger": "task-designer",
+    "task-designer": "task-distributor",
+    "task-distributor": "worker",
     "worker": "review-distributor",
     "review-distributor": "review",
     "review": "feedbackgate",
 }
 
+SEQUENTIAL_THINKING_REQUIRED_STAGES = {
+    "orchestrator",
+    "task-designer",
+    "task-distributor",
+    "review-distributor",
+}
+
+STAGE_GUIDANCE = {
+    "orchestrator": {
+        "activation_ref": "$orchestrator",
+        "contract_ref": "skills/orchestrator/contract.json",
+        "source_docs": ["00-canonical-map.md", "09-runtime-orchestration-steps.md"],
+        "required_input_artifacts": ["user_goal", "latest_user_message", "feedback_carryover", "task_design_reentry_decision"],
+        "required_external_mcp_tools": ["MCP_DOCKER.sequentialthinking"],
+        "required_sections": ["sequential_thinking_ref_or_waiver", "scope", "success_criteria", "risk_flags"],
+    },
+    "context-ledger": {
+        "activation_ref": "$context-ledger",
+        "contract_ref": "skills/context-ledger/contract.json",
+        "source_docs": ["02-context-planning.md"],
+        "required_input_artifacts": ["orchestration_request", "latest_context_packet"],
+    },
+    "task-designer": {
+        "activation_ref": "$task-designer",
+        "contract_ref": "skills/task-designer/contract.json",
+        "source_docs": ["02-context-planning.md"],
+        "required_input_artifacts": ["orchestration_request", "context_packet"],
+        "required_external_mcp_tools": ["MCP_DOCKER.sequentialthinking"],
+        "required_sections": [
+            "problem_definition",
+            "assumptions",
+            "options",
+            "comparison_criteria",
+            "selected_option_id",
+            "selection_rationale",
+            "selected_option_risks",
+            "distribution_boundaries",
+            "artifact_profile",
+            "sequential_thinking_ref_or_waiver",
+        ],
+        "expected_output_artifact": "task_design",
+        "must_not_do": ["select concrete agents", "create worker lanes", "set fanout allocation"],
+    },
+    "task-distributor": {
+        "activation_ref": "$task-distributor",
+        "contract_ref": "skills/task-distributor/contract.json",
+        "source_docs": ["02-context-planning.md", "06-agent-roster-models.md"],
+        "required_input_artifacts": ["task_design", "selected_task_design_ref", "context_packet", "fanout_budget"],
+        "required_external_mcp_tools": ["MCP_DOCKER.sequentialthinking"],
+        "required_sections": [
+            "selected_task_design_ref",
+            "task_distribution_criteria_ref",
+            "artifact_profile",
+            "sequential_thinking_ref_or_waiver",
+            "worker_lanes",
+            "dependencies",
+            "fanout_budget",
+        ],
+        "expected_output_artifact": "execution_plan",
+        "must_not_do": ["redefine task design", "change selected option", "spawn workers"],
+    },
+    "worker": {
+        "activation_ref": "$worker",
+        "contract_ref": "skills/worker/contract.json",
+        "source_docs": ["03-worker-materialization.md", "06-agent-roster-models.md"],
+        "required_input_artifacts": ["execution_plan", "task_distribution_criteria_ref", "context_packet", "fanout_budget"],
+    },
+    "review-distributor": {
+        "activation_ref": "$review-distributor",
+        "contract_ref": "skills/review-distributor/contract.json",
+        "source_docs": ["04-review-flow.md", "06-agent-roster-models.md"],
+        "required_input_artifacts": ["worker_handoff_results", "active_passes", "context_packet", "fanout_budget"],
+        "required_external_mcp_tools": ["MCP_DOCKER.sequentialthinking"],
+        "required_sections": [
+            "worker_handoff_results_ref",
+            "review_distribution_criteria_ref",
+            "artifact_profile",
+            "sequential_thinking_ref_or_waiver",
+            "review_lanes",
+            "coverage_contract",
+        ],
+        "expected_output_artifact": "review_plan",
+        "must_not_do": ["spawn reviewers", "skip review coverage criteria"],
+    },
+    "review": {
+        "activation_ref": "$review",
+        "contract_ref": "skills/review/contract.json",
+        "source_docs": ["04-review-flow.md", "06-agent-roster-models.md"],
+        "required_input_artifacts": ["review_plan", "review_distribution_criteria_ref", "worker_handoff_results", "active_passes", "fanout_budget"],
+    },
+    "feedbackgate": {
+        "activation_ref": "$feedbackgate",
+        "contract_ref": "skills/feedbackgate/contract.json",
+        "source_docs": ["05-feedback-lifecycle.md", "08-quality-evals.md"],
+        "required_input_artifacts": [
+            "worker_handoff_results",
+            "review_handoff_results",
+            "review_waivers",
+            "stage_passes",
+            "active_passes",
+        ],
+    },
+}
+
 PREVIOUS_STAGE = {
     "context-ledger": "orchestrator",
-    "task-planner": "context-ledger",
-    "worker": "task-planner",
+    "task-designer": "context-ledger",
+    "task-distributor": "task-designer",
+    "worker": "task-distributor",
     "review-distributor": "worker",
     "review": "review-distributor",
     "feedbackgate": "review",
@@ -52,11 +159,22 @@ REQUIRED_TOOL_SEQUENCE = {
         "record_mcp_quiescence",
         "validate_tool_sequence",
     ),
-    "task-planner": (
+    "task-designer": (
         "read_context_packet",
         "validate_context_revision",
         "append_stage_pass",
         "validate_stage_packet",
+        "validate_task_design",
+        "write_context_packet",
+        "record_mcp_quiescence",
+        "validate_tool_sequence",
+    ),
+    "task-distributor": (
+        "read_context_packet",
+        "validate_context_revision",
+        "append_stage_pass",
+        "validate_stage_packet",
+        "validate_execution_plan",
         "write_context_packet",
         "record_mcp_quiescence",
         "validate_tool_sequence",
@@ -76,6 +194,7 @@ REQUIRED_TOOL_SEQUENCE = {
         "validate_context_revision",
         "append_stage_pass",
         "validate_stage_packet",
+        "validate_review_plan",
         "write_context_packet",
         "record_mcp_quiescence",
         "validate_tool_sequence",
@@ -171,6 +290,16 @@ def validate_stage_packet(
     artifact_name = STAGE_ARTIFACTS.get(stage_name)
     if artifact_name and artifact_name not in stage_packet and stage_packet.get("artifact_type") != artifact_name:
         error("artifact.missing", artifact_name, f"missing expected artifact: {artifact_name}")
+    elif stage_name == "orchestrator":
+        _validate_sequential_thinking_ref(stage_packet, "sequential_thinking_ref", error)
+    elif stage_name == "context-ledger":
+        _validate_reentry_cache_if_present(stage_packet, error)
+    elif stage_name == "task-designer":
+        _extend_errors(validate_task_design(stage_packet), errors)
+    elif stage_name == "task-distributor":
+        _extend_errors(validate_execution_plan(stage_packet), errors)
+    elif stage_name == "review-distributor":
+        _extend_errors(validate_review_plan(stage_packet), errors)
 
     expected_next = _expected_next_owner(stage_name, stage_packet)
     actual_next = stage_packet.get("next_owner", expected_next)
@@ -185,6 +314,7 @@ def validate_stage_packet(
         "stage_name": stage_name,
         "expected_artifact": artifact_name,
         "expected_next_owner": expected_next,
+        "next_stage": build_next_stage_guidance(expected_next),
         "errors": errors,
     }
 
@@ -254,7 +384,12 @@ def validate_stage_completion(stage_name: str, packet: dict[str, Any]) -> dict[s
         if not isinstance(judgment, dict):
             error("completion.judgment_shape", "judgment_envelope", "judgment_envelope must be an object")
             judgment = {}
-        if judgment.get("feedback_required") is False:
+        if judgment.get("feedback_required") is True:
+            _validate_task_design_reentry_decision(
+                judgment.get("task_design_reentry_decision", stage_packet.get("task_design_reentry_decision")),
+                error,
+            )
+        elif judgment.get("feedback_required") is False:
             waivers_valid = _validate_lane_reason_items("review_waivers", stage_packet.get("review_waivers"), error)
             _validate_non_empty_dict(
                 "feedback_gate_evidence",
@@ -289,13 +424,406 @@ def validate_stage_completion(stage_name: str, packet: dict[str, Any]) -> dict[s
     }
 
 
+def validate_task_design(packet: dict[str, Any]) -> dict[str, Any]:
+    errors: list[dict[str, str]] = []
+
+    def error(code: str, path: str, message: str) -> None:
+        errors.append({"code": code, "path": path, "message": message})
+
+    stage_packet = packet.get("stage_packet", packet)
+    task_design = stage_packet.get("task_design") if isinstance(stage_packet, dict) else None
+    if not isinstance(task_design, dict):
+        error("task_design.shape", "task_design", "task_design must be an object")
+        task_design = {}
+
+    _require_non_empty_value(task_design, "problem_definition", "task_design.problem_definition", error)
+    _require_non_empty_list(task_design, "assumptions", "task_design.assumptions", error)
+    _require_non_empty_list(task_design, "comparison_criteria", "task_design.comparison_criteria", error)
+    _require_non_empty_value(task_design, "selected_option_id", "task_design.selected_option_id", error)
+    _require_non_empty_value(task_design, "selection_rationale", "task_design.selection_rationale", error)
+    _require_non_empty_list(task_design, "selected_option_risks", "task_design.selected_option_risks", error)
+    _require_non_empty_list(task_design, "distribution_boundaries", "task_design.distribution_boundaries", error)
+    _validate_artifact_profile(task_design.get("artifact_profile"), "task_design.artifact_profile", "task-designer", error)
+    _validate_sequential_thinking_ref(task_design, "task_design.sequential_thinking_ref", error)
+
+    options = task_design.get("options")
+    if not isinstance(options, list) or len(options) < 3:
+        error("task_design.options_count", "task_design.options", "task_design requires at least three options")
+        options = [] if not isinstance(options, list) else options
+
+    option_ids: set[str] = set()
+    for index, option in enumerate(options):
+        path = f"task_design.options[{index}]"
+        if not isinstance(option, dict):
+            error("task_design.option_shape", path, "option must be an object")
+            continue
+        option_id = option.get("id")
+        if not isinstance(option_id, str) or not option_id:
+            error("task_design.option_id", f"{path}.id", "option id is required")
+        else:
+            option_ids.add(option_id)
+        _require_non_empty_value(option, "title", f"{path}.title", error)
+        _require_non_empty_value(option, "summary", f"{path}.summary", error)
+        _require_non_empty_value(option, "fit_assessment", f"{path}.fit_assessment", error)
+        _require_non_empty_list(option, "tradeoffs", f"{path}.tradeoffs", error)
+
+    selected_option_id = task_design.get("selected_option_id")
+    if isinstance(selected_option_id, str) and option_ids and selected_option_id not in option_ids:
+        error(
+            "task_design.selected_option_missing",
+            "task_design.selected_option_id",
+            "selected_option_id must match one option id",
+        )
+
+    forbidden = ("execution_plan", "worker_lanes", "agent_selection", "worker_handoff_results")
+    for field_name in forbidden:
+        if field_name in task_design:
+            error(
+                "task_design.forbidden_output",
+                f"task_design.{field_name}",
+                f"task-designer must not emit {field_name}",
+            )
+
+    return {"valid": not errors, "artifact": "task_design", "errors": errors}
+
+
+def validate_execution_plan(packet: dict[str, Any]) -> dict[str, Any]:
+    errors: list[dict[str, str]] = []
+
+    def error(code: str, path: str, message: str) -> None:
+        errors.append({"code": code, "path": path, "message": message})
+
+    stage_packet = packet.get("stage_packet", packet)
+    execution_plan = stage_packet.get("execution_plan") if isinstance(stage_packet, dict) else None
+    if not isinstance(execution_plan, dict):
+        error("execution_plan.shape", "execution_plan", "execution_plan must be an object")
+        execution_plan = {}
+
+    _require_non_empty_value(execution_plan, "selected_task_design_ref", "execution_plan.selected_task_design_ref", error)
+    criteria_ref = execution_plan.get("task_distribution_criteria_ref")
+    if not isinstance(criteria_ref, str) or not criteria_ref:
+        error(
+            "execution_plan.criteria_ref",
+            "execution_plan.task_distribution_criteria_ref",
+            "task_distribution_criteria_ref is required",
+        )
+    elif not criteria_ref.lower().endswith(".md"):
+        error(
+            "execution_plan.criteria_ref_format",
+            "execution_plan.task_distribution_criteria_ref",
+            "task_distribution_criteria_ref must point to an MD artifact",
+        )
+
+    _require_non_empty_list(execution_plan, "distribution_principles", "execution_plan.distribution_principles", error)
+    _require_non_empty_list(execution_plan, "worker_lanes", "execution_plan.worker_lanes", error)
+    _require_non_empty_value(execution_plan, "fanout_budget", "execution_plan.fanout_budget", error)
+    _validate_artifact_profile(execution_plan.get("artifact_profile"), "execution_plan.artifact_profile", "task-distributor", error)
+    _validate_sequential_thinking_ref(execution_plan, "execution_plan.sequential_thinking_ref", error)
+
+    lane_ids: set[str] = set()
+    worker_lanes = execution_plan.get("worker_lanes", [])
+    if isinstance(worker_lanes, list):
+        for index, lane in enumerate(worker_lanes):
+            path = f"execution_plan.worker_lanes[{index}]"
+            if not isinstance(lane, dict):
+                error("execution_plan.lane_shape", path, "worker lane must be an object")
+                continue
+            lane_id = lane.get("lane_id")
+            if not isinstance(lane_id, str) or not lane_id:
+                error("execution_plan.lane_id", f"{path}.lane_id", "lane_id is required")
+            elif lane_id in lane_ids:
+                error("execution_plan.lane_id_duplicate", f"{path}.lane_id", "lane_id must be unique")
+            else:
+                lane_ids.add(lane_id)
+            _require_non_empty_value(lane, "purpose", f"{path}.purpose", error)
+            _require_non_empty_value(lane, "specialist_category", f"{path}.specialist_category", error)
+            _require_non_empty_list(lane, "input_artifacts", f"{path}.input_artifacts", error)
+            _require_non_empty_list(lane, "expected_outputs", f"{path}.expected_outputs", error)
+            _require_non_empty_list(lane, "handoff_evidence", f"{path}.handoff_evidence", error)
+
+    dependencies = execution_plan.get("dependencies", [])
+    if dependencies is not None and not isinstance(dependencies, list):
+        error("execution_plan.dependencies_shape", "execution_plan.dependencies", "dependencies must be a list")
+    elif isinstance(dependencies, list):
+        for index, dependency in enumerate(dependencies):
+            path = f"execution_plan.dependencies[{index}]"
+            if not isinstance(dependency, dict):
+                error("execution_plan.dependency_shape", path, "dependency must be an object")
+                continue
+            before = dependency.get("before")
+            after = dependency.get("after")
+            if before not in lane_ids:
+                error("execution_plan.dependency_before", f"{path}.before", "dependency before must match a lane_id")
+            if after not in lane_ids:
+                error("execution_plan.dependency_after", f"{path}.after", "dependency after must match a lane_id")
+
+    forbidden = ("task_design", "design_decisions", "selected_option_rationale")
+    for field_name in forbidden:
+        if field_name in execution_plan:
+            error(
+                "execution_plan.forbidden_output",
+                f"execution_plan.{field_name}",
+                f"task-distributor must not emit {field_name}",
+            )
+
+    return {"valid": not errors, "artifact": "execution_plan", "errors": errors}
+
+
+def validate_review_plan(packet: dict[str, Any]) -> dict[str, Any]:
+    errors: list[dict[str, str]] = []
+
+    def error(code: str, path: str, message: str) -> None:
+        errors.append({"code": code, "path": path, "message": message})
+
+    stage_packet = packet.get("stage_packet", packet)
+    review_plan = stage_packet.get("review_plan") if isinstance(stage_packet, dict) else None
+    if not isinstance(review_plan, dict):
+        error("review_plan.shape", "review_plan", "review_plan must be an object")
+        review_plan = {}
+
+    _require_non_empty_value(review_plan, "worker_handoff_results_ref", "review_plan.worker_handoff_results_ref", error)
+    criteria_ref = review_plan.get("review_distribution_criteria_ref")
+    if not isinstance(criteria_ref, str) or not criteria_ref:
+        error(
+            "review_plan.criteria_ref",
+            "review_plan.review_distribution_criteria_ref",
+            "review_distribution_criteria_ref is required",
+        )
+    elif not criteria_ref.lower().endswith(".md"):
+        error(
+            "review_plan.criteria_ref_format",
+            "review_plan.review_distribution_criteria_ref",
+            "review_distribution_criteria_ref must point to an MD artifact",
+        )
+
+    _require_non_empty_list(review_plan, "review_principles", "review_plan.review_principles", error)
+    _require_non_empty_list(review_plan, "review_lanes", "review_plan.review_lanes", error)
+    _require_non_empty_value(review_plan, "coverage_contract", "review_plan.coverage_contract", error)
+    _validate_artifact_profile(review_plan.get("artifact_profile"), "review_plan.artifact_profile", "review-distributor", error)
+    _validate_sequential_thinking_ref(review_plan, "review_plan.sequential_thinking_ref", error)
+
+    lane_ids: set[str] = set()
+    review_lanes = review_plan.get("review_lanes", [])
+    if isinstance(review_lanes, list):
+        for index, lane in enumerate(review_lanes):
+            path = f"review_plan.review_lanes[{index}]"
+            if not isinstance(lane, dict):
+                error("review_plan.lane_shape", path, "review lane must be an object")
+                continue
+            lane_id = lane.get("lane_id")
+            if not isinstance(lane_id, str) or not lane_id:
+                error("review_plan.lane_id", f"{path}.lane_id", "lane_id is required")
+            elif lane_id in lane_ids:
+                error("review_plan.lane_id_duplicate", f"{path}.lane_id", "lane_id must be unique")
+            else:
+                lane_ids.add(lane_id)
+            _require_non_empty_value(lane, "purpose", f"{path}.purpose", error)
+            _require_non_empty_value(lane, "reviewer_category", f"{path}.reviewer_category", error)
+            _require_non_empty_list(lane, "input_artifacts", f"{path}.input_artifacts", error)
+            _require_non_empty_list(lane, "required_findings", f"{path}.required_findings", error)
+            _require_non_empty_list(lane, "handoff_evidence", f"{path}.handoff_evidence", error)
+
+    forbidden = ("execution_plan", "task_design", "worker_handoff_results", "judgment_envelope")
+    for field_name in forbidden:
+        if field_name in review_plan:
+            error(
+                "review_plan.forbidden_output",
+                f"review_plan.{field_name}",
+                f"review-distributor must not emit {field_name}",
+            )
+
+    return {"valid": not errors, "artifact": "review_plan", "errors": errors}
+
+
 def _expected_next_owner(stage_name: str, packet: dict[str, Any]) -> str:
+    if stage_name == "context-ledger":
+        decision = packet.get("task_design_reentry_decision")
+        context_packet = packet.get("context_packet")
+        if decision is None and isinstance(context_packet, dict):
+            decision = context_packet.get("task_design_reentry_decision")
+        if isinstance(decision, dict) and decision.get("action") in {"reuse_task_design", "skip_to_distribution"}:
+            return "task-distributor"
+        if isinstance(decision, dict) and decision.get("action") == "revise_task_design":
+            return "task-designer"
     if stage_name == "feedbackgate":
         judgment = packet.get("judgment_envelope", packet)
         if isinstance(judgment, dict) and judgment.get("feedback_required") is True:
             return "orchestrator"
         return "final"
     return NEXT_OWNER.get(stage_name, "unknown")
+
+
+def build_next_stage_guidance(next_owner: str) -> dict[str, Any]:
+    if next_owner == "final":
+        return {
+            "owner": "final",
+            "activation_ref": None,
+            "contract_ref": None,
+            "source_docs": [],
+            "required_input_artifacts": ["judgment_envelope", "feedback_gate_evidence"],
+            "required_mcp_tools": [],
+            "action": "emit final response only after feedbackgate completion evidence is valid",
+        }
+
+    guidance = STAGE_GUIDANCE.get(next_owner)
+    if guidance is None:
+        return {
+            "owner": next_owner,
+            "activation_ref": None,
+            "contract_ref": None,
+            "source_docs": [],
+            "required_input_artifacts": [],
+            "required_mcp_tools": [],
+            "action": "block until next_owner is corrected to a known stage",
+        }
+
+    activation_ref = guidance["activation_ref"]
+    return {
+        "owner": next_owner,
+        **guidance,
+        "required_mcp_tools": list(REQUIRED_TOOL_SEQUENCE.get(next_owner, ())),
+        "action": (
+            f"activate {activation_ref}; read only its SKILL.md, adjacent contract.json, "
+            "and the listed source_docs"
+        ),
+    }
+
+
+def _extend_errors(validation: dict[str, Any], errors: list[dict[str, str]]) -> None:
+    if validation.get("valid"):
+        return
+    for item in validation.get("errors", []):
+        if isinstance(item, dict):
+            errors.append(item)
+
+
+def _require_non_empty_value(source: dict[str, Any], field_name: str, path: str, error) -> bool:
+    value = source.get(field_name)
+    if value is None or value == "":
+        error(f"{path}.missing", path, f"{field_name} is required")
+        return False
+    return True
+
+
+def _require_non_empty_list(source: dict[str, Any], field_name: str, path: str, error) -> bool:
+    value = source.get(field_name)
+    if not isinstance(value, list) or len(value) == 0:
+        error(f"{path}.missing", path, f"{field_name} must be a non-empty list")
+        return False
+    return True
+
+
+def _validate_artifact_profile(value: Any, path: str, expected_source_stage: str, error) -> bool:
+    if not isinstance(value, dict):
+        error(f"{path}.shape", path, "artifact_profile must be an object")
+        return False
+
+    valid = True
+    if not isinstance(value.get("version"), int):
+        error(f"{path}.version", f"{path}.version", "version must be an integer")
+        valid = False
+    if value.get("source_stage") != expected_source_stage:
+        error(
+            f"{path}.source_stage",
+            f"{path}.source_stage",
+            f"source_stage must be {expected_source_stage}",
+        )
+        valid = False
+    if not value.get("reuse_policy"):
+        error(f"{path}.reuse_policy", f"{path}.reuse_policy", "reuse_policy is required")
+        valid = False
+    invalidated_by = value.get("invalidated_by")
+    if not isinstance(invalidated_by, list) or not invalidated_by:
+        error(f"{path}.invalidated_by", f"{path}.invalidated_by", "invalidated_by must be a non-empty list")
+        valid = False
+    return valid
+
+
+def _validate_sequential_thinking_ref(source: dict[str, Any], path: str, error) -> bool:
+    value = source.get("sequential_thinking_ref")
+    waiver = source.get("sequential_thinking_waiver")
+    if value is None or value == "":
+        return _validate_sequential_thinking_waiver(waiver, path, error)
+    if not isinstance(value, (str, dict)):
+        error(f"{path}.shape", path, "sequential_thinking_ref must be a non-empty string or evidence object")
+        return False
+    if isinstance(value, dict) and not value:
+        error(f"{path}.shape", path, "sequential_thinking_ref must be a non-empty string or evidence object")
+        return False
+    return True
+
+
+def _validate_sequential_thinking_waiver(value: Any, path: str, error) -> bool:
+    waiver_path = path.rsplit(".", 1)[0] + ".sequential_thinking_waiver" if "." in path else "sequential_thinking_waiver"
+    if not isinstance(value, dict):
+        error(
+            f"{path}.missing",
+            path,
+            "sequential_thinking_ref or sequential_thinking_waiver is required after MCP_DOCKER sequentialthinking attempt",
+        )
+        return False
+
+    valid = True
+    if value.get("status") not in {"tool_unavailable", "tool_error", "timeout"}:
+        error(
+            f"{waiver_path}.status",
+            f"{waiver_path}.status",
+            "status must be tool_unavailable, tool_error, or timeout",
+        )
+        valid = False
+    for field_name in ("reason", "fallback_summary"):
+        if not value.get(field_name):
+            error(
+                f"{waiver_path}.{field_name}",
+                f"{waiver_path}.{field_name}",
+                f"{field_name} is required",
+            )
+            valid = False
+    return valid
+
+
+def _validate_reentry_cache_if_present(stage_packet: dict[str, Any], error) -> bool:
+    context_packet = stage_packet.get("context_packet")
+    if not isinstance(context_packet, dict):
+        return True
+
+    decision = context_packet.get("task_design_reentry_decision")
+    cache = context_packet.get("reentry_cache")
+    if decision is None and cache is None:
+        return True
+
+    valid = True
+    if not isinstance(cache, dict):
+        error("reentry_cache.shape", "context_packet.reentry_cache", "reentry_cache must be an object on feedback loops")
+        return False
+
+    if not cache.get("task_design_ref"):
+        error("reentry_cache.task_design_ref", "context_packet.reentry_cache.task_design_ref", "task_design_ref is required")
+        valid = False
+    for field_name in ("reusable_artifacts", "invalidated_artifacts"):
+        value = cache.get(field_name)
+        if not isinstance(value, list):
+            error(
+                f"reentry_cache.{field_name}",
+                f"context_packet.reentry_cache.{field_name}",
+                f"{field_name} must be a list",
+            )
+            valid = False
+    if not cache.get("distribution_action"):
+        error(
+            "reentry_cache.distribution_action",
+            "context_packet.reentry_cache.distribution_action",
+            "distribution_action is required",
+        )
+        valid = False
+    if not cache.get("review_distribution_action"):
+        error(
+            "reentry_cache.review_distribution_action",
+            "context_packet.reentry_cache.review_distribution_action",
+            "review_distribution_action is required",
+        )
+        valid = False
+    return valid
 
 
 def _non_empty_list(value: Any) -> bool:
@@ -356,6 +884,67 @@ def _validate_lane_reason_items(field_name: str, value: Any, error) -> bool:
             valid_items += 1
 
     return valid_items > 0
+
+
+def _validate_task_design_reentry_decision(value: Any, error) -> bool:
+    if not isinstance(value, dict):
+        error(
+            "completion.task_design_reentry_decision.shape",
+            "judgment_envelope.task_design_reentry_decision",
+            "feedback loops require task_design_reentry_decision",
+        )
+        return False
+
+    action = value.get("action")
+    allowed_actions = {"revise_task_design", "reuse_task_design", "skip_to_distribution"}
+    valid = True
+    if action not in allowed_actions:
+        error(
+            "completion.task_design_reentry_decision.action",
+            "judgment_envelope.task_design_reentry_decision.action",
+            "action must be revise_task_design, reuse_task_design, or skip_to_distribution",
+        )
+        valid = False
+    if not value.get("reason"):
+        error(
+            "completion.task_design_reentry_decision.reason",
+            "judgment_envelope.task_design_reentry_decision.reason",
+            "reason is required",
+        )
+        valid = False
+    if action in {"reuse_task_design", "skip_to_distribution"} and not value.get("task_design_ref"):
+        error(
+            "completion.task_design_reentry_decision.task_design_ref",
+            "judgment_envelope.task_design_reentry_decision.task_design_ref",
+            "task_design_ref is required when reusing or skipping task design",
+        )
+        valid = False
+    for field_name in ("reusable_artifacts", "invalidated_artifacts"):
+        field_value = value.get(field_name)
+        if not isinstance(field_value, list):
+            error(
+                f"completion.task_design_reentry_decision.{field_name}",
+                f"judgment_envelope.task_design_reentry_decision.{field_name}",
+                f"{field_name} must be a list",
+            )
+            valid = False
+    allowed_distribution_actions = {"reuse_execution_plan", "revise_execution_plan", "skip_distribution"}
+    if value.get("distribution_action") not in allowed_distribution_actions:
+        error(
+            "completion.task_design_reentry_decision.distribution_action",
+            "judgment_envelope.task_design_reentry_decision.distribution_action",
+            "distribution_action must be reuse_execution_plan, revise_execution_plan, or skip_distribution",
+        )
+        valid = False
+    allowed_review_actions = {"reuse_review_criteria", "revise_review_plan", "skip_review_distribution"}
+    if value.get("review_distribution_action") not in allowed_review_actions:
+        error(
+            "completion.task_design_reentry_decision.review_distribution_action",
+            "judgment_envelope.task_design_reentry_decision.review_distribution_action",
+            "review_distribution_action must be reuse_review_criteria, revise_review_plan, or skip_review_distribution",
+        )
+        valid = False
+    return valid
 
 
 def _validate_materialization(stage_name: str, packet: dict[str, Any], error) -> None:

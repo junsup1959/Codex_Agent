@@ -1,28 +1,29 @@
 # Agent Architecture Index
 
-This is the concise source index for the global Codex architecture.
+This is the concise source index for the Codex architecture that starts when `$orchestrator` is explicitly used.
 
 ## Canonical Flow
 
-`orchestrator -> context-ledger -> task-planner -> worker -> review-distributor -> review -> feedbackgate`
+`orchestrator -> context-ledger -> task-designer -> task-distributor -> worker -> review-distributor -> review -> feedbackgate`
 
 The visible work shape is:
 
-`orchestrator -> task-planner -> specialist workers -> review-distributor -> specialist reviews -> feedbackgate`
+`orchestrator -> task-designer -> task-distributor -> specialist workers -> review-distributor -> specialist reviews -> feedbackgate`
 
-The mandatory `context-ledger` stage sits between `$orchestrator` and `$task-planner` because run-local state must be synchronized through MCP before planning.
+After `$orchestrator` starts the architecture run, the mandatory `context-ledger` stage sits between `$orchestrator` and `$task-designer` because run-local state must be synchronized through MCP before design.
 
 ## Mandatory Stage Skills
 
 | Order | Skill | Responsibility |
 | --- | --- | --- |
-| 1 | `$orchestrator` | classify scope, assign ids, create `orchestration_request` |
+| 1 | `$orchestrator` | classify scope with `MCP_DOCKER.sequentialthinking`, assign ids, create `orchestration_request` |
 | 2 | `$context-ledger` | read/write `codex-context-ledger`, emit `context_packet` |
-| 3 | `$task-planner` | create bounded `execution_plan` |
-| 4 | `$worker` | enumerate specialists, `spawn_agent`, `wait_agent`, return worker evidence |
-| 5 | `$review-distributor` | select required review axes and reviewer plan |
-| 6 | `$review` | enumerate reviewers, `spawn_agent`, `wait_agent`, return review evidence |
-| 7 | `$feedbackgate` | judge review evidence; final output or feedback to `$orchestrator` |
+| 3 | `$task-designer` | use `MCP_DOCKER.sequentialthinking`, create option-based `task_design.md`, select the best fit, and attach `artifact_profile` |
+| 4 | `$task-distributor` | use `MCP_DOCKER.sequentialthinking`, create `task_distribution_criteria.md`, bounded `execution_plan`, and `artifact_profile` |
+| 5 | `$worker` | force specialist worker calls with `spawn_agent`/`wait_agent`, return worker evidence |
+| 6 | `$review-distributor` | use `MCP_DOCKER.sequentialthinking`, create `review_distribution_criteria.md`, reviewer plan, and `artifact_profile` |
+| 7 | `$review` | force specialist reviewer calls for non-waived review lanes, return review evidence |
+| 8 | `$feedbackgate` | judge review evidence; final output or feedback to `$orchestrator` |
 
 ## Context Ledger Barrier
 
@@ -30,23 +31,28 @@ The mandatory `context-ledger` stage sits between `$orchestrator` and `$task-pla
 
 Before handoff, each stage writes its delta through `$context-ledger` and records `stage_pass_ref`. Required packet fields are `context_packet_version`, `consumed_context_revision`, `context_delta`, `new_artifact_refs`, `new_evidence_refs`, and `stage_pass_ref`.
 
-## Read Order
+## Reference Rule
+
+Stage execution is contract-scoped: load the active skill's `SKILL.md`, adjacent `contract.json`, and only the files named by that contract's `source_docs`. Do not preload this full index for every stage.
+
+## Architecture Maintenance Read Order
 
 | File | Purpose |
 | --- | --- |
 | `AGENT-ARCHITECTURE-MAPPER.md` | compact map from entrypoint to details |
 | `09-runtime-orchestration-steps.md` | mandatory runtime order |
-| `02-context-planning.md` | context ledger and planning boundary |
+| `02-context-planning.md` | context ledger, task design, and task distribution boundary |
 | `03-worker-materialization.md` | worker specialist materialization |
-| `04-review-flow.md` | review distribution and specialist reviews |
+| `04-review-flow.md` | review distribution criteria and specialist reviews |
 | `05-feedback-lifecycle.md` | feedbackgate and loop return |
 | `07-contracts-ledgers.md` | artifact, pass, and evidence fields |
 | `08-quality-evals.md` | MCP validation expectations |
 
 ## MCP Validation Boundary
 
-Runtime stage validation is performed only through `codex-context-ledger` MCP tools, especially `validate_context_revision`, `validate_stage_packet`, and `validate_tool_sequence`. Static repository scripts and external wrappers are not part of the architecture gate.
+Runtime stage validation is performed only through `codex-context-ledger` MCP tools, especially `validate_context_revision`, `validate_stage_packet`, stage-specific validators, and `validate_tool_sequence`. Static repository scripts and external wrappers are not part of the architecture gate.
+For `$orchestrator`, `$task-designer`, `$task-distributor`, and `$review-distributor`, stage artifacts must also carry `sequential_thinking_ref` or `sequential_thinking_waiver` proving `MCP_DOCKER.sequentialthinking` was attempted before finalization.
 
 ## Update Rule
 
-When the architecture changes, update the affected docs, stage skills, and skill `contract.json` together. The next architecture-required run must prove the flow through MCP tool return values.
+When the architecture changes, update the affected docs, stage skills, and skill `contract.json` together. The next orchestrator-started architecture run must prove the flow through MCP tool return values.

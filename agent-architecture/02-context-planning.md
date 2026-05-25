@@ -1,6 +1,6 @@
 # Context And Planning
 
-This document defines `$context-ledger` and `$task-planner`.
+This document defines `$context-ledger`, `$task-designer`, and `$task-distributor`.
 
 ## Context Ledger
 
@@ -16,7 +16,7 @@ The ledger owns:
 - context revision
 - `role_pass_readiness`
 
-It does not plan lanes, route workers, spawn agents, review, or judge final output.
+It does not design task options, plan lanes, route workers, spawn agents, review, or judge final output.
 
 ## Barrier Protocol
 
@@ -38,12 +38,36 @@ At stage handoff:
 5. Call `append_stage_pass(...)`.
 6. Call `mark_stale(...)` for superseded inputs.
 
-## Task Planner
+## Task Designer
 
-`$task-planner` converts the current `context_packet` into one bounded `execution_plan`.
+`$task-designer` converts the current `context_packet` into `task_design.md` and a structured `task_design`.
 
-The plan must include worker lanes, scope, success criteria, expected artifacts, validation prompts, review hints, fanout budget, and blockers. It does not spawn specialists.
+The design must include:
+
+- problem definition
+- assumptions
+- at least three options
+- comparison criteria
+- selected option
+- selection rationale
+- risks for the selected option
+- distribution boundaries for `$task-distributor`
+- `artifact_profile` with source stage, reuse policy, and invalidation conditions
+- `sequential_thinking_ref` or `sequential_thinking_waiver` proving `MCP_DOCKER.sequentialthinking` was attempted before finalizing the design
+
+It may use `${CODEX_HOME}/agents/<category>/*.toml` as role guidance, but it must not select concrete agents, create worker lanes, allocate fanout, or spawn specialists.
+
+## Task Distributor
+
+`$task-distributor` converts the selected `task_design` into `task_distribution_criteria.md` and one bounded `execution_plan`.
+
+The distribution criteria document must explain lane creation, dependency, fanout, ownership, specialist-category guidance, MCP usage, and handoff evidence rules. The execution plan must reference both the selected task design and the distribution criteria. It must not redefine the selected option, success criteria, or design decisions.
+
+The execution plan must include `artifact_profile` so feedback loops can decide whether it can be reused or must be invalidated.
+It must also include `sequential_thinking_ref` or `sequential_thinking_waiver` proving `MCP_DOCKER.sequentialthinking` was attempted before finalizing lane boundaries, dependencies, fanout, ownership, and MCP usage limits.
+
+The distributor may consult the agent roster for category fit, but it does not call agents. `$worker` is responsible for forced specialist worker materialization.
 
 ## Required API Checks
 
-Use `validate_stage_packet` for barrier and artifact shape, then `validate_tool_sequence` for the stage MCP call order. Both checks run through the localhost `codex-context-ledger` MCP API.
+Use `validate_stage_packet` for barrier and artifact shape, `validate_task_design` for `$task-designer`, `validate_execution_plan` for `$task-distributor`, then `validate_tool_sequence` for the stage MCP call order. These checks run through the localhost `codex-context-ledger` MCP API.

@@ -5,10 +5,11 @@
   "mandatory_for_architecture_required": true,
   "stage_owner": "orchestrator",
   "stage_execution_mode": "main_agent_role_pass",
-  "purpose": "Classify architecture-required work and emit one canonical orchestration_request for context-ledger.",
-  "input_artifacts": ["user_goal", "latest_user_message", "feedback_carryover"],
+  "activation_policy": "explicit_orchestrator_use_only",
+  "purpose": "Enter the architecture flow, set architecture_required=true for this run, and emit one canonical orchestration_request for context-ledger.",
+  "input_artifacts": ["user_goal", "latest_user_message", "feedback_carryover", "task_design_reentry_decision"],
   "output_artifacts": ["orchestration_request"],
-  "forbidden_outputs": ["context_packet", "execution_plan", "worker_handoff_results", "review_handoff_results", "judgment_envelope"],
-  "required_evidence": ["context_ledger_barrier", "mcp_tool_call_sequence", "validate_stage_packet_result", "validate_tool_sequence_result", "mcp_tool_return_values", "validate_context_revision_result", "consumed_context_revision", "context_delta", "new_artifact_refs", "new_evidence_refs", "stage_pass_ref", "mcp_usage_evidence_or_waiver", "mcp_quiescence_snapshot", "contract_provenance"],
-  "source_docs": ["00-canonical-map.md", "01-harness-layer.md", "07-contracts-ledgers.md", "09-runtime-orchestration-steps.md"]
+  "forbidden_outputs": ["context_packet", "task_design", "execution_plan", "worker_handoff_results", "review_handoff_results", "judgment_envelope"],
+  "required_evidence": ["context_ledger_barrier", "mcp_tool_call_sequence", "validate_stage_packet_result", "validate_tool_sequence_result", "mcp_tool_return_values", "validate_context_revision_result", "consumed_context_revision", "context_delta", "new_artifact_refs", "new_evidence_refs", "stage_pass_ref", "sequential_thinking_ref_or_waiver", "mcp_usage_evidence_or_waiver", "mcp_quiescence_snapshot", "contract_provenance"],
+  "source_docs": ["00-canonical-map.md", "09-runtime-orchestration-steps.md"]
 }

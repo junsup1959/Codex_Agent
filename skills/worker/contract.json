@@ -5,10 +5,10 @@
   "mandatory_for_architecture_required": true,
   "stage_owner": "worker",
   "stage_execution_mode": "main_agent_role_pass",
-  "purpose": "Materialize task-planner lanes into spawned specialist worker agents and waited worker evidence.",
-  "input_artifacts": ["execution_plan", "context_packet", "fanout_budget"],
+  "purpose": "Materialize task-distributor lanes into forced specialist worker agent calls and waited worker evidence.",
+  "input_artifacts": ["execution_plan", "task_distribution_criteria_ref", "context_packet", "fanout_budget"],
   "output_artifacts": ["worker_handoff_results", "active_passes", "missing_lane_classifications"],
   "forbidden_outputs": ["review_handoff_results", "judgment_envelope", "final_output"],
   "required_evidence": ["context_ledger_barrier", "mcp_tool_call_sequence", "validate_stage_packet_result", "validate_stage_completion_result", "validate_tool_sequence_result", "mcp_tool_return_values", "validate_context_revision_result", "consumed_context_revision", "context_delta", "new_artifact_refs", "new_evidence_refs", "stage_pass_ref", "specialist_catalog_enumeration", "spawn_receipt_ref", "child_agent_identity", "wait_handle", "wait_agent_evidence", "lane_status_classification", "mcp_quiescence_snapshot"],
-  "source_docs": ["03-worker-materialization.md", "06-agent-roster-models.md", "07-contracts-ledgers.md", "09-runtime-orchestration-steps.md"]
+  "source_docs": ["03-worker-materialization.md", "06-agent-roster-models.md"]
 }

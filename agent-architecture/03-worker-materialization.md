@@ -5,6 +5,7 @@
 ## Inputs
 
 - current `execution_plan`
+- `task_distribution_criteria_ref`
 - validated `context_packet`
 - `fanout_budget`
 - complete specialist catalog under `${CODEX_HOME}/agents/<category>/*.toml`
@@ -35,4 +36,4 @@
 
 ## Required API Checks
 
-Before handoff, `$worker` must call `validate_stage_packet` and then `validate_tool_sequence` through `codex-context-ledger`. Both must return `valid=true`.
+Before handoff, `$worker` must call `validate_stage_packet`, `validate_stage_completion`, and then `validate_tool_sequence` through `codex-context-ledger`. All must return `valid=true`.

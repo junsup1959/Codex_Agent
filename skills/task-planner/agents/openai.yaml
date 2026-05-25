@@ -1,5 +1,0 @@
-interface:
-  display_name: "Task Planner"
-  short_description: "Context packet to execution plan"
-  default_prompt: "Use $task-planner to turn the current context_packet into a bounded execution_plan."
-

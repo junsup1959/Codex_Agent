@@ -1,11 +1,15 @@
 ---
 name: feedbackgate
-description: Execute the mandatory global Codex Feedback Gate stage. Use when specialist review results must determine final output or bounded feedback back to orchestrator.
+description: Execute the Codex Feedback Gate stage inside an orchestrator-started architecture run. Use when specialist review results must determine final output or bounded feedback back to orchestrator.
 ---
 
 # Feedbackgate
 
 Use this skill after `$review` returns reviewer results or explicit waivers. It is the only stage that may allow final output.
+
+## Reference Scope
+
+Read only this skill, adjacent `contract.json`, and the `source_docs` listed there. Do not load planning, worker, or review-distributor docs unless resolving a missing-evidence blocker.
 
 ## MCP Tool Sequence
 
@@ -36,9 +40,26 @@ Call these tools in order with `stage_name="feedbackgate"` where accepted.
 
 ## Output
 
-Return `judgment_envelope`. If `feedback_required=true`, set `next_owner="orchestrator"` and bounded rework scope. If approved, set `next_owner="final"` and allow the user-facing final response.
+Return `judgment_envelope`. If `feedback_required=true`, set `next_owner="orchestrator"`, bounded rework scope, and `task_design_reentry_decision`. If approved, set `next_owner="final"` and allow the user-facing final response.
+
+`task_design_reentry_decision.action` must be one of:
+
+- `revise_task_design`
+- `reuse_task_design`
+- `skip_to_distribution`
+
+For `reuse_task_design` or `skip_to_distribution`, include `task_design_ref` and `reason`.
+
+Every feedback reentry decision must also include:
+
+- `reusable_artifacts`
+- `invalidated_artifacts`
+- `distribution_action`: `reuse_execution_plan`, `revise_execution_plan`, or `skip_distribution`
+- `review_distribution_action`: `reuse_review_criteria`, `revise_review_plan`, or `skip_review_distribution`
 
 ## Hard Rules
 
 - Do not approve with stale context, missing waits, invalid review evidence, missing waivers, or open MCP/tool residue.
 - Feedback always returns to `$orchestrator`; it never jumps directly to a mid-loop stage.
+- Do not require a full task redesign on every feedback loop; make the reentry decision explicit.
+- Do not emit feedback without artifact reuse and invalidation scope.

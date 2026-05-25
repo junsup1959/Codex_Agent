@@ -1,4 +1,4 @@
 interface:
   display_name: "Review Distributor"
-  short_description: "Routes spawned specialist review lanes"
-  default_prompt: "Use $review-distributor to select and materialize bounded specialist review lanes from worker evidence."
+  short_description: "Review criteria and reviewer plan"
+  default_prompt: "Use $review-distributor to create review_distribution_criteria.md and a bounded specialist reviewer plan from worker evidence."
