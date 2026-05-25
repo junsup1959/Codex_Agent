@@ -37,6 +37,8 @@ Call these tools in order with `stage_name="task-designer"` where accepted.
 - `write.context_revision` as the new current revision
 - `validate_tool_sequence.valid=true`
 
+If `validate_task_design` is not callable in the current session, stop before emitting design options. Record the missing tool as blocker evidence through the ledger when possible, and return only a blocked handoff status. Do not provide an informal fallback `task_design`, option comparison, or selected recommendation.
+
 ## Output
 
 Emit `task_design.md` and `task_design` with:
@@ -56,6 +58,7 @@ Emit `task_design.md` and `task_design` with:
 
 ## Hard Rules
 
+- Do not emit `task_design`, `task_design.md`, option 1/2/3 comparisons, or a selected option unless `validate_task_design.valid=true` is present from the MCP tool call.
 - Do not create worker lanes.
 - Do not choose concrete agents.
 - Do not allocate fanout or file ownership.
