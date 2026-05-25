@@ -43,6 +43,46 @@ Return only after these API results are present:
 
 Emit one `orchestration_request` with scope, exclusions, success criteria, risk flags, feedback carryover, any `task_design_reentry_decision`, `sequential_thinking_ref` or `sequential_thinking_waiver`, `context_delta`, artifact/evidence refs, and `next_owner="context-ledger"`.
 
+## Stage Packet Shape
+
+`validate_stage_packet` validates the full wrapper, not only `orchestration_request`. Keep `sequential_thinking_ref` or `sequential_thinking_waiver` at the top level and inside `orchestration_request`.
+
+```json
+{
+  "stage_name": "orchestrator",
+  "context_packet_version": 1,
+  "consumed_context_revision": 0,
+  "stage_execution_mode": "main_agent_role_pass",
+  "stage_pass_ref": "stage_pass:orchestrator:<append.id>",
+  "sequential_thinking_ref": "<ref or use sequential_thinking_waiver>",
+  "architecture_required": true,
+  "orchestration_request": {
+    "run_id": "<run_id>",
+    "loop_id": "<loop id>",
+    "architecture_required": true,
+    "scope": {
+      "goal": "<user goal>",
+      "in_scope": ["<in scope item>"],
+      "out_of_scope": ["<out of scope item>"]
+    },
+    "success_criteria": ["<criterion>"],
+    "risk_flags": ["<risk>"],
+    "feedback_carryover": ["<feedback item>"],
+    "task_design_reentry_decision": null,
+    "sequential_thinking_ref": "<same ref or use sequential_thinking_waiver>",
+    "stage_pass_ref": "stage_pass:orchestrator:<append.id>",
+    "context_delta": {"approved_facts": ["<fact>"]},
+    "new_artifact_refs": ["<artifact ref>"],
+    "new_evidence_refs": ["stage_pass:orchestrator:<append.id>"],
+    "next_owner": "context-ledger"
+  },
+  "context_delta": {"approved_facts": ["<fact>"]},
+  "new_artifact_refs": ["<artifact ref>"],
+  "new_evidence_refs": ["stage_pass:orchestrator:<append.id>"],
+  "next_owner": "context-ledger"
+}
+```
+
 ## Hard Rules
 
 - Do not spawn control-stage agents.

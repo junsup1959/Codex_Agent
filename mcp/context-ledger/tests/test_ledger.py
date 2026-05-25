@@ -509,6 +509,13 @@ class ContextLedgerTests(unittest.TestCase):
         self.assertEqual(final_result["next_stage"]["required_input_artifacts"], ["judgment_envelope", "feedback_gate_evidence"])
 
     def test_next_stage_guidance_includes_valid_packet_templates(self):
+        orchestrator_guidance = build_next_stage_guidance("orchestrator")
+        orchestrator_template = orchestrator_guidance["stage_packet_template"]
+        self.assertEqual(orchestrator_template["stage_name"], "orchestrator")
+        self.assertIn("orchestration_request", orchestrator_template)
+        self.assertIn("sequential_thinking_ref", orchestrator_template)
+        self.assertEqual(orchestrator_template["next_owner"], "context-ledger")
+
         context_guidance = build_next_stage_guidance("context-ledger")
         context_template = context_guidance["stage_packet_template"]
         self.assertEqual(context_template["stage_name"], "context-ledger")
