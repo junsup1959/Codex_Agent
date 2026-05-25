@@ -7,8 +7,8 @@
   "stage_execution_mode": "main_agent_role_pass",
   "purpose": "Judge specialist worker and review evidence, then allow final output or return bounded feedback to orchestrator.",
   "input_artifacts": ["worker_handoff_results", "review_handoff_results", "review_waivers", "stage_passes", "active_passes"],
-  "output_artifacts": ["judgment_envelope", "feedback_gate_evidence"],
+  "output_artifacts": ["judgment_envelope", "feedback_gate_evidence", "task_design_reentry_decision"],
   "forbidden_outputs": ["launch_manifest", "active_passes", "unvalidated_final_output"],
-  "required_evidence": ["context_ledger_barrier", "mcp_tool_call_sequence", "validate_stage_packet_result", "validate_stage_completion_result", "validate_tool_sequence_result", "mcp_tool_return_values", "validate_context_revision_result", "consumed_context_revision", "context_delta", "new_artifact_refs", "new_evidence_refs", "stage_pass_ref", "review_input_refs_or_waivers", "feedback_gate_evidence", "mcp_quiescence_snapshot"],
-  "source_docs": ["05-feedback-lifecycle.md", "07-contracts-ledgers.md", "08-quality-evals.md", "09-runtime-orchestration-steps.md"]
+  "required_evidence": ["context_ledger_barrier", "mcp_tool_call_sequence", "validate_stage_packet_result", "validate_stage_completion_result", "validate_tool_sequence_result", "mcp_tool_return_values", "validate_context_revision_result", "consumed_context_revision", "context_delta", "new_artifact_refs", "new_evidence_refs", "stage_pass_ref", "review_input_refs_or_waivers", "feedback_gate_evidence", "task_design_reentry_decision", "reusable_artifacts", "invalidated_artifacts", "distribution_action", "review_distribution_action", "mcp_quiescence_snapshot"],
+  "source_docs": ["05-feedback-lifecycle.md", "08-quality-evals.md"]
 }

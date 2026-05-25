@@ -1,6 +1,6 @@
 # Feedback Lifecycle
 
-`$feedbackgate` is the mandatory final gate for architecture-required work.
+`$feedbackgate` is the mandatory final gate after `$orchestrator` has explicitly started an architecture run.
 
 ## Inputs
 
@@ -28,6 +28,23 @@
 If checks pass, `$feedbackgate` emits final approval evidence.
 
 If checks fail, it emits `feedback_required=true`, bounded rework scope, and `next_owner="orchestrator"`. Feedback always restarts at `$orchestrator`, then `$context-ledger`; it never jumps directly into a worker or review lane.
+
+Feedback loops must also emit `task_design_reentry_decision` so the next loop does not redesign work unnecessarily:
+
+- `revise_task_design`: assumptions, goals, success criteria, or selected option changed; rerun `$task-designer`.
+- `reuse_task_design`: design is still valid; keep the existing `task_design_ref` and continue with downstream adjustment.
+- `skip_to_distribution`: design is valid and only distribution/lane routing needs adjustment; `$context-ledger` may hand off to `$task-distributor`.
+
+`reuse_task_design` and `skip_to_distribution` require `task_design_ref` plus a reason.
+
+Every feedback reentry decision must also declare:
+
+- `reusable_artifacts`
+- `invalidated_artifacts`
+- `distribution_action`
+- `review_distribution_action`
+
+`$context-ledger` preserves that decision as `reentry_cache` so the next loop can skip unchanged design/distribution work without losing artifact provenance.
 
 ## Ledger Handoff
 

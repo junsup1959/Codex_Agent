@@ -5,10 +5,10 @@
   "mandatory_for_architecture_required": true,
   "stage_owner": "context-ledger",
   "stage_execution_mode": "main_agent_role_pass",
-  "purpose": "Synchronize run-local context through the codex-context-ledger MCP before task planning.",
+  "purpose": "Synchronize run-local context through the codex-context-ledger MCP before task design or feedback-loop task distribution.",
   "input_artifacts": ["orchestration_request", "latest_context_packet"],
-  "output_artifacts": ["context_packet"],
-  "forbidden_outputs": ["execution_plan", "launch_manifest", "worker_handoff_results", "review_plan", "judgment_envelope", "final_output"],
+  "output_artifacts": ["context_packet", "reentry_cache"],
+  "forbidden_outputs": ["task_design", "execution_plan", "launch_manifest", "worker_handoff_results", "review_plan", "judgment_envelope", "final_output"],
   "required_evidence": ["context_ledger_barrier", "mcp_tool_call_sequence", "validate_stage_packet_result", "validate_tool_sequence_result", "mcp_tool_return_values", "validate_context_revision_result", "codex_context_ledger_mcp_evidence", "consumed_context_revision", "context_revision", "context_delta", "new_artifact_refs", "new_evidence_refs", "stage_pass_ref", "role_pass_readiness", "mcp_quiescence_snapshot"],
-  "source_docs": ["02-context-planning.md", "07-contracts-ledgers.md", "09-runtime-orchestration-steps.md"]
+  "source_docs": ["02-context-planning.md"]
 }

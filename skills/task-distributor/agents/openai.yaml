@@ -1,0 +1,5 @@
+interface:
+  display_name: "Task Distributor"
+  short_description: "Distribution criteria and execution plan"
+  default_prompt: "Use $task-distributor to create task_distribution_criteria.md and a bounded execution_plan from selected task_design."
+
