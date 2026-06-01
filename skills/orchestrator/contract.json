@@ -6,9 +6,9 @@
   "stage_owner": "orchestrator",
   "stage_execution_mode": "main_agent_role_pass",
   "activation_policy": "explicit_orchestrator_use_only",
-  "purpose": "Enter the architecture flow, set architecture_required=true for this run, and emit one canonical orchestration_request for context-ledger.",
+  "purpose": "Classify an explicit architecture entry request, either setting architecture_required=true for the full flow or emitting an express-direct handoff with architecture_required=false for simple direct work.",
   "input_artifacts": ["user_goal", "latest_user_message", "feedback_carryover", "task_design_reentry_decision"],
-  "output_artifacts": ["orchestration_request"],
+  "output_artifacts": ["orchestration_request", "express_direct_handoff"],
   "forbidden_outputs": ["context_packet", "task_design", "execution_plan", "worker_handoff_results", "review_handoff_results", "judgment_envelope"],
   "required_evidence": ["context_ledger_barrier", "mcp_tool_call_sequence", "validate_stage_packet_result", "validate_tool_sequence_result", "mcp_tool_return_values", "validate_context_revision_result", "consumed_context_revision", "context_delta", "new_artifact_refs", "new_evidence_refs", "stage_pass_ref", "sequential_thinking_ref_or_waiver", "mcp_usage_evidence_or_waiver", "mcp_quiescence_snapshot", "contract_provenance"],
   "source_docs": ["00-canonical-map.md", "09-runtime-orchestration-steps.md"]
