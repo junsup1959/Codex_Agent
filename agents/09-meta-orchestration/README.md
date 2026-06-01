@@ -3,7 +3,7 @@
 Agents that help plan or coordinate multi-agent Codex workflows without inventing unsupported mechanics.
 
 Canonical architecture control stages are skills, not spawnable agents:
-`$orchestrator`, `$context-ledger`, `$task-planner`, `$worker`, `$review-distributor`, `$review`, and `$feedbackgate`.
+`$orchestrator`, `$context-ledger`, `$task-designer`, `$task-distributor`, `$worker`, `$review-distributor`, `$review`, and `$feedbackgate`.
 
 Included agents:
 
