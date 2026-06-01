@@ -24,6 +24,8 @@ NEXT_OWNER = {
     "review": "feedbackgate",
 }
 
+DIRECT_WORKFLOW_OWNER = "direct-workflow"
+
 SEQUENTIAL_THINKING_REQUIRED_STAGES = {
     "orchestrator",
     "task-designer",
@@ -126,6 +128,14 @@ STAGE_GUIDANCE = {
             "active_passes",
         ],
     },
+    DIRECT_WORKFLOW_OWNER: {
+        "activation_ref": None,
+        "contract_ref": None,
+        "source_docs": ["00-canonical-map.md", "09-runtime-orchestration-steps.md"],
+        "required_input_artifacts": ["orchestration_request", "express_direct_handoff"],
+        "required_external_mcp_tools": [],
+        "required_sections": ["workflow_mode", "complexity_classification", "direct_workflow_scope"],
+    },
 }
 
 STAGE_PACKET_TEMPLATES = {
@@ -164,6 +174,41 @@ STAGE_PACKET_TEMPLATES = {
             "<sequential_thinking_ref or waiver evidence>",
         ],
         "next_owner": "context-ledger",
+    },
+    "orchestrator_express_direct": {
+        "stage_name": "orchestrator",
+        "context_packet_version": "<int: next packet version>",
+        "consumed_context_revision": "<int: read.context_revision>",
+        "stage_execution_mode": "main_agent_role_pass",
+        "stage_pass_ref": "stage_pass:orchestrator:<append.id>",
+        "sequential_thinking_ref": "<ref or use sequential_thinking_waiver>",
+        "architecture_required": False,
+        "workflow_mode": "express-direct",
+        "orchestration_request": {
+            "run_id": "<run_id>",
+            "loop_id": "<loop id>",
+            "architecture_required": False,
+            "workflow_mode": "express-direct",
+            "complexity_classification": "simple",
+            "direct_workflow_scope": {
+                "allowed_actions": ["normal direct workflow implementation and validation"],
+                "excluded_actions": ["specialist fanout", "architecture completion claims"],
+            },
+            "express_direct_reason": "<why the full architecture loop is unnecessary>",
+            "sequential_thinking_ref": "<same ref or use sequential_thinking_waiver>",
+            "stage_pass_ref": "stage_pass:orchestrator:<append.id>",
+            "context_delta": {"approved_facts": ["<fact>"]},
+            "new_artifact_refs": ["<artifact ref>"],
+            "new_evidence_refs": ["stage_pass:orchestrator:<append.id>"],
+            "next_owner": DIRECT_WORKFLOW_OWNER,
+        },
+        "context_delta": {"approved_facts": ["<fact>"]},
+        "new_artifact_refs": ["<artifact ref>"],
+        "new_evidence_refs": [
+            "stage_pass:orchestrator:<append.id>",
+            "<sequential_thinking_ref or waiver evidence>",
+        ],
+        "next_owner": DIRECT_WORKFLOW_OWNER,
     },
     "context-ledger": {
         "stage_name": "context-ledger",
@@ -752,6 +797,8 @@ def validate_review_plan(packet: dict[str, Any]) -> dict[str, Any]:
 
 
 def _expected_next_owner(stage_name: str, packet: dict[str, Any]) -> str:
+    if stage_name == "orchestrator" and _is_express_direct_handoff(packet):
+        return DIRECT_WORKFLOW_OWNER
     if stage_name == "context-ledger":
         decision = packet.get("task_design_reentry_decision")
         context_packet = packet.get("context_packet")
@@ -770,6 +817,19 @@ def _expected_next_owner(stage_name: str, packet: dict[str, Any]) -> str:
 
 
 def build_next_stage_guidance(next_owner: str) -> dict[str, Any]:
+    if next_owner == DIRECT_WORKFLOW_OWNER:
+        guidance = STAGE_GUIDANCE[DIRECT_WORKFLOW_OWNER]
+        return {
+            "owner": DIRECT_WORKFLOW_OWNER,
+            **guidance,
+            "required_mcp_tools": [],
+            "stage_packet_template": STAGE_PACKET_TEMPLATES["orchestrator_express_direct"],
+            "action": (
+                "exit the architecture stage chain and resume the normal direct workflow; "
+                "do not spawn specialists or claim full architecture completion"
+            ),
+        }
+
     if next_owner == "final":
         return {
             "owner": "final",
@@ -804,6 +864,26 @@ def build_next_stage_guidance(next_owner: str) -> dict[str, Any]:
             "and the listed source_docs"
         ),
     }
+
+
+def _is_express_direct_handoff(packet: dict[str, Any]) -> bool:
+    request = packet.get("orchestration_request")
+    if not isinstance(request, dict):
+        request = {}
+
+    next_owner = packet.get("next_owner", request.get("next_owner"))
+    workflow_mode = packet.get("workflow_mode", request.get("workflow_mode"))
+    architecture_required = packet.get("architecture_required", request.get("architecture_required"))
+    request_architecture_required = request.get("architecture_required", architecture_required)
+    complexity = packet.get("complexity_classification", request.get("complexity_classification"))
+
+    return (
+        next_owner == DIRECT_WORKFLOW_OWNER
+        and workflow_mode == "express-direct"
+        and architecture_required is False
+        and request_architecture_required is False
+        and complexity in {"simple", "direct", "low-risk"}
+    )
 
 
 def _extend_errors(validation: dict[str, Any], errors: list[dict[str, str]]) -> None:

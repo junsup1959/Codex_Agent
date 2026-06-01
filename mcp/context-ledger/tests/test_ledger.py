@@ -508,6 +508,61 @@ class ContextLedgerTests(unittest.TestCase):
         self.assertEqual(final_result["next_stage"], build_next_stage_guidance("final"))
         self.assertEqual(final_result["next_stage"]["required_input_artifacts"], ["judgment_envelope", "feedback_gate_evidence"])
 
+    def test_orchestrator_can_route_simple_tasks_to_direct_workflow(self):
+        packet = {
+            "stage_name": "orchestrator",
+            "context_packet_version": 1,
+            "consumed_context_revision": 0,
+            "stage_execution_mode": "main_agent_role_pass",
+            "context_delta": {"approved_facts": ["simple task can stay direct"]},
+            "new_artifact_refs": ["artifact:orchestration_request"],
+            "new_evidence_refs": ["stage_pass:orchestrator:1", "mcp:sequentialthinking:orchestrator"],
+            "stage_pass_ref": "stage_pass:orchestrator:1",
+            "sequential_thinking_ref": "mcp:MCP_DOCKER.sequentialthinking:orchestrator",
+            "architecture_required": False,
+            "workflow_mode": "express-direct",
+            "next_owner": "direct-workflow",
+            "orchestration_request": {
+                "architecture_required": False,
+                "workflow_mode": "express-direct",
+                "complexity_classification": "simple",
+                "direct_workflow_scope": {
+                    "allowed_actions": ["normal implementation"],
+                    "excluded_actions": ["specialist fanout"],
+                },
+                "express_direct_reason": "Single-file direct fix does not need design/distribution fanout.",
+                "stage_pass_ref": "stage_pass:orchestrator:1",
+                "sequential_thinking_ref": "mcp:MCP_DOCKER.sequentialthinking:orchestrator",
+                "context_delta": {"approved_facts": ["simple task can stay direct"]},
+                "new_artifact_refs": ["artifact:orchestration_request"],
+                "new_evidence_refs": ["stage_pass:orchestrator:1"],
+                "next_owner": "direct-workflow",
+            },
+        }
+
+        result = validate_stage_packet("orchestrator", packet, current_revision=0)
+        self.assertTrue(result["valid"], result)
+        self.assertEqual(result["expected_next_owner"], "direct-workflow")
+        self.assertEqual(result["next_stage"]["owner"], "direct-workflow")
+        self.assertEqual(result["next_stage"]["activation_ref"], None)
+        self.assertEqual(result["next_stage"]["required_mcp_tools"], [])
+        self.assertIn("normal direct workflow", result["next_stage"]["action"])
+
+        invalid = validate_stage_packet(
+            "orchestrator",
+            {
+                **packet,
+                "architecture_required": True,
+                "orchestration_request": {
+                    **packet["orchestration_request"],
+                    "architecture_required": True,
+                },
+            },
+            current_revision=0,
+        )
+        self.assertFalse(invalid["valid"], invalid)
+        self.assertIn("handoff.next_owner", {item["code"] for item in invalid["errors"]})
+
     def test_next_stage_guidance_includes_valid_packet_templates(self):
         orchestrator_guidance = build_next_stage_guidance("orchestrator")
         orchestrator_template = orchestrator_guidance["stage_packet_template"]

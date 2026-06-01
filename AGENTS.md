@@ -12,14 +12,17 @@ This file is the compact project guardrail. Detailed contracts live under `${COD
 
 `orchestrator -> context-ledger -> task-designer -> task-distributor -> worker -> review-distributor -> review -> feedbackgate`
 
-User-facing shorthand may omit the ledger as `orchestrator -> task-designer -> task-distributor -> specialist workers -> review-distributor -> reviews -> feedbackgate`, but runtime execution must include the mandatory `$context-ledger` stage.
+User-facing shorthand may omit the ledger as `orchestrator -> task-designer -> task-distributor -> specialist workers -> review-distributor -> reviews -> feedbackgate`, but runtime execution must include the mandatory `$context-ledger` stage when `architecture_required=true`.
+
+Simple tasks may use the compact path `orchestrator -> direct-workflow` when `$orchestrator` explicitly emits `architecture_required=false`, `workflow_mode="express-direct"`, and `next_owner="direct-workflow"`.
 
 ## Application Rule
 
 - Direct-answer, implementation, research, audit, comparison, risky, multi-agent, or multi-artifact work may proceed through the normal direct workflow unless the user explicitly invokes `$orchestrator`, asks to run the architecture/orchestration flow, or a current `$feedbackgate` result returns bounded feedback to `$orchestrator`.
-- `$orchestrator` activation is the entry point that sets `architecture_required=true` for that run. Do not set `architecture_required=true` from a global/non-trivial-task classifier alone.
-- After `$orchestrator` emits an `orchestration_request`, follow `09-runtime-orchestration-steps.md`; do not skip or reorder stages unless `$feedbackgate` blocks the loop.
-- `orchestration_stage_skills_required=true` applies only inside an orchestrator-started run: force `$orchestrator`, `$context-ledger`, `$task-designer`, `$task-distributor`, `$worker`, `$review-distributor`, `$review`, and `$feedbackgate` in that order.
+- `$orchestrator` activation is the entry point that either sets `architecture_required=true` for a full run or returns simple work to the direct workflow with `architecture_required=false`. Do not set `architecture_required=true` from a global/non-trivial-task classifier alone.
+- After `$orchestrator` emits an `orchestration_request`, follow `09-runtime-orchestration-steps.md`. When `architecture_required=true`, do not skip or reorder stages unless `$feedbackgate` blocks the loop.
+- `express_direct_allowed=true`: for simple, low-risk, single-lane work that does not need specialist fanout, task-design alternatives, or feedbackgate judgment, `$orchestrator` may emit `workflow_mode="express-direct"` with `next_owner="direct-workflow"`. This exits the architecture stage chain and resumes normal direct implementation, validation, and user reporting.
+- `orchestration_stage_skills_required=true` applies only inside a full architecture run with `architecture_required=true`: force `$orchestrator`, `$context-ledger`, `$task-designer`, `$task-distributor`, `$worker`, `$review-distributor`, `$review`, and `$feedbackgate` in that order.
 - `context_ledger_mcp_required=true`: `$context-ledger` must use localhost `codex-context-ledger` as the run/session source of truth. Do not spawn a physical resident context agent.
 - `context_ledger_barrier_required=true`: every mandatory stage must read and validate the latest ledger revision before acting, then write a context delta and `stage_pass_ref` before handoff.
 - `mcp_tool_sequence_validation_required=true`: every mandatory skill must call its documented `codex-context-ledger` tools in order and require `validate_stage_packet.valid=true` plus `validate_tool_sequence.valid=true`; `$task-designer` also requires `validate_task_design.valid=true`, `$task-distributor` also requires `validate_execution_plan.valid=true`, `$review-distributor` also requires `validate_review_plan.valid=true`, and `$worker`, `$review`, and `$feedbackgate` also require `validate_stage_completion.valid=true`.
@@ -35,7 +38,8 @@ User-facing shorthand may omit the ledger as `orchestrator -> task-designer -> t
 
 ## Feedback Gate
 
-- `feedback_gate_mandatory=true` for every orchestrator-started architecture run.
+- `feedback_gate_mandatory=true` for every full architecture run with `architecture_required=true`.
+- Express-direct handoffs are not architecture completions and must not claim feedbackgate approval, reviewer coverage, or merge-readiness.
 - `$feedbackgate` judges review evidence and either allows final output or returns bounded feedback to `$orchestrator`.
 - Feedback loops must preserve artifact reuse scope through `task_design_reentry_decision` and `$context-ledger.reentry_cache`.
 - Final, ready, approve, merge-ready, or completion claims are forbidden without current `feedback_gate_evidence`, reviewer results or waivers, MCP validation evidence, and clean MCP/tool quiescence.
