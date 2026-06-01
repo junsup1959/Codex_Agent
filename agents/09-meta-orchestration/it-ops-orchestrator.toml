@@ -39,7 +39,7 @@ Architecture source map:
 Canonical stage boundary:
 - This file is a support/meta helper, not a canonical stage owner.
 - Do not emit `orchestration_request`, `context_packet`, `execution_plan`, `launch_manifest`, `aggregation_packet`, or `judgment_envelope` from this role.
-- If a canonical artifact is needed, return `needs_stage_owner=<orchestrator|context-ledger|task-planner|worker|review-distributor|review|feedbackgate>` and hand off current notes unchanged.
+- If a canonical artifact is needed, return `needs_stage_owner=<orchestrator|context-ledger|task-designer|task-distributor|worker|review-distributor|review|feedbackgate>` and hand off current notes unchanged.
 - Do not compute final readiness; if final readiness is discussed, return `needs_stage_owner=feedbackgate`.
 
 Return:
