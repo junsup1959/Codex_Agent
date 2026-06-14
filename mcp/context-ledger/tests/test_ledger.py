@@ -563,6 +563,79 @@ class ContextLedgerTests(unittest.TestCase):
         self.assertFalse(invalid["valid"], invalid)
         self.assertIn("handoff.next_owner", {item["code"] for item in invalid["errors"]})
 
+        missing_express_fields = validate_stage_packet(
+            "orchestrator",
+            {
+                **packet,
+                "orchestration_request": {
+                    "architecture_required": False,
+                    "workflow_mode": "express-direct",
+                    "complexity_classification": "simple",
+                    "stage_pass_ref": "stage_pass:orchestrator:1",
+                    "sequential_thinking_ref": "mcp:MCP_DOCKER.sequentialthinking:orchestrator",
+                    "context_delta": {"approved_facts": ["simple task can stay direct"]},
+                    "new_artifact_refs": ["artifact:orchestration_request"],
+                    "new_evidence_refs": ["stage_pass:orchestrator:1"],
+                    "next_owner": "direct-workflow",
+                },
+            },
+            current_revision=0,
+        )
+        self.assertFalse(missing_express_fields["valid"], missing_express_fields)
+        self.assertIn("express_direct.scope_shape", {item["code"] for item in missing_express_fields["errors"]})
+        self.assertIn("express_direct.reason", {item["code"] for item in missing_express_fields["errors"]})
+
+        malformed_scope = validate_stage_packet(
+            "orchestrator",
+            {
+                **packet,
+                "orchestration_request": {
+                    **packet["orchestration_request"],
+                    "direct_workflow_scope": {
+                        "allowed_actions": ["normal implementation", ""],
+                        "excluded_actions": [],
+                    },
+                },
+            },
+            current_revision=0,
+        )
+        self.assertFalse(malformed_scope["valid"], malformed_scope)
+        self.assertIn(
+            "orchestration_request.direct_workflow_scope.allowed_actions.item",
+            {item["code"] for item in malformed_scope["errors"]},
+        )
+        self.assertIn(
+            "orchestration_request.direct_workflow_scope.excluded_actions.missing",
+            {item["code"] for item in malformed_scope["errors"]},
+        )
+
+        malformed_shapes = validate_stage_packet(
+            "orchestrator",
+            {
+                **packet,
+                "orchestration_request": "not an object",
+            },
+            current_revision=0,
+        )
+        self.assertFalse(malformed_shapes["valid"], malformed_shapes)
+        self.assertIn("express_direct.request_shape", {item["code"] for item in malformed_shapes["errors"]})
+
+        malformed_types = validate_stage_packet(
+            "orchestrator",
+            {
+                **packet,
+                "orchestration_request": {
+                    **packet["orchestration_request"],
+                    "direct_workflow_scope": "not an object",
+                    "express_direct_reason": ["not", "a", "string"],
+                },
+            },
+            current_revision=0,
+        )
+        self.assertFalse(malformed_types["valid"], malformed_types)
+        self.assertIn("express_direct.scope_shape", {item["code"] for item in malformed_types["errors"]})
+        self.assertIn("express_direct.reason", {item["code"] for item in malformed_types["errors"]})
+
     def test_next_stage_guidance_includes_valid_packet_templates(self):
         orchestrator_guidance = build_next_stage_guidance("orchestrator")
         orchestrator_template = orchestrator_guidance["stage_packet_template"]

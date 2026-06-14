@@ -453,6 +453,8 @@ def validate_stage_packet(
         error("artifact.missing", artifact_name, f"missing expected artifact: {artifact_name}")
     elif stage_name == "orchestrator":
         _validate_sequential_thinking_ref(stage_packet, "sequential_thinking_ref", error)
+        if _is_express_direct_handoff(stage_packet):
+            _validate_express_direct_handoff(stage_packet, error)
     elif stage_name == "context-ledger":
         _validate_reentry_cache_if_present(stage_packet, error)
     elif stage_name == "task-designer":
@@ -868,7 +870,8 @@ def build_next_stage_guidance(next_owner: str) -> dict[str, Any]:
 
 def _is_express_direct_handoff(packet: dict[str, Any]) -> bool:
     request = packet.get("orchestration_request")
-    if not isinstance(request, dict):
+    request_is_object = isinstance(request, dict)
+    if not request_is_object:
         request = {}
 
     next_owner = packet.get("next_owner", request.get("next_owner"))
@@ -876,14 +879,54 @@ def _is_express_direct_handoff(packet: dict[str, Any]) -> bool:
     architecture_required = packet.get("architecture_required", request.get("architecture_required"))
     request_architecture_required = request.get("architecture_required", architecture_required)
     complexity = packet.get("complexity_classification", request.get("complexity_classification"))
+    complexity_matches = complexity in {"simple", "direct", "low-risk"} or (
+        not request_is_object and complexity is None
+    )
 
     return (
         next_owner == DIRECT_WORKFLOW_OWNER
         and workflow_mode == "express-direct"
         and architecture_required is False
         and request_architecture_required is False
-        and complexity in {"simple", "direct", "low-risk"}
+        and complexity_matches
     )
+
+
+def _validate_express_direct_handoff(packet: dict[str, Any], error) -> None:
+    request = packet.get("orchestration_request")
+    if not isinstance(request, dict):
+        error("express_direct.request_shape", "orchestration_request", "orchestration_request must be an object")
+        return
+
+    scope = request.get("direct_workflow_scope")
+    if not isinstance(scope, dict) or not scope:
+        error(
+            "express_direct.scope_shape",
+            "orchestration_request.direct_workflow_scope",
+            "direct_workflow_scope must be a non-empty object",
+        )
+        scope = {}
+
+    _require_non_empty_string_list(
+        scope,
+        "allowed_actions",
+        "orchestration_request.direct_workflow_scope.allowed_actions",
+        error,
+    )
+    _require_non_empty_string_list(
+        scope,
+        "excluded_actions",
+        "orchestration_request.direct_workflow_scope.excluded_actions",
+        error,
+    )
+
+    reason = request.get("express_direct_reason")
+    if not isinstance(reason, str) or not reason:
+        error(
+            "express_direct.reason",
+            "orchestration_request.express_direct_reason",
+            "express_direct_reason must be a non-empty string",
+        )
 
 
 def _extend_errors(validation: dict[str, Any], errors: list[dict[str, str]]) -> None:
@@ -906,6 +949,17 @@ def _require_non_empty_list(source: dict[str, Any], field_name: str, path: str, 
     value = source.get(field_name)
     if not isinstance(value, list) or len(value) == 0:
         error(f"{path}.missing", path, f"{field_name} must be a non-empty list")
+        return False
+    return True
+
+
+def _require_non_empty_string_list(source: dict[str, Any], field_name: str, path: str, error) -> bool:
+    value = source.get(field_name)
+    if not isinstance(value, list) or len(value) == 0:
+        error(f"{path}.missing", path, f"{field_name} must be a non-empty list")
+        return False
+    if any(not isinstance(item, str) or not item for item in value):
+        error(f"{path}.item", path, f"{field_name} must contain only non-empty strings")
         return False
     return True
 
