@@ -870,7 +870,8 @@ def build_next_stage_guidance(next_owner: str) -> dict[str, Any]:
 
 def _is_express_direct_handoff(packet: dict[str, Any]) -> bool:
     request = packet.get("orchestration_request")
-    if not isinstance(request, dict):
+    request_is_object = isinstance(request, dict)
+    if not request_is_object:
         request = {}
 
     next_owner = packet.get("next_owner", request.get("next_owner"))
@@ -878,13 +879,16 @@ def _is_express_direct_handoff(packet: dict[str, Any]) -> bool:
     architecture_required = packet.get("architecture_required", request.get("architecture_required"))
     request_architecture_required = request.get("architecture_required", architecture_required)
     complexity = packet.get("complexity_classification", request.get("complexity_classification"))
+    complexity_matches = complexity in {"simple", "direct", "low-risk"} or (
+        not request_is_object and complexity is None
+    )
 
     return (
         next_owner == DIRECT_WORKFLOW_OWNER
         and workflow_mode == "express-direct"
         and architecture_required is False
         and request_architecture_required is False
-        and complexity in {"simple", "direct", "low-risk"}
+        and complexity_matches
     )
 
 

@@ -609,6 +609,33 @@ class ContextLedgerTests(unittest.TestCase):
             {item["code"] for item in malformed_scope["errors"]},
         )
 
+        malformed_shapes = validate_stage_packet(
+            "orchestrator",
+            {
+                **packet,
+                "orchestration_request": "not an object",
+            },
+            current_revision=0,
+        )
+        self.assertFalse(malformed_shapes["valid"], malformed_shapes)
+        self.assertIn("express_direct.request_shape", {item["code"] for item in malformed_shapes["errors"]})
+
+        malformed_types = validate_stage_packet(
+            "orchestrator",
+            {
+                **packet,
+                "orchestration_request": {
+                    **packet["orchestration_request"],
+                    "direct_workflow_scope": "not an object",
+                    "express_direct_reason": ["not", "a", "string"],
+                },
+            },
+            current_revision=0,
+        )
+        self.assertFalse(malformed_types["valid"], malformed_types)
+        self.assertIn("express_direct.scope_shape", {item["code"] for item in malformed_types["errors"]})
+        self.assertIn("express_direct.reason", {item["code"] for item in malformed_types["errors"]})
+
     def test_next_stage_guidance_includes_valid_packet_templates(self):
         orchestrator_guidance = build_next_stage_guidance("orchestrator")
         orchestrator_template = orchestrator_guidance["stage_packet_template"]
