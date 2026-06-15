@@ -134,7 +134,14 @@ STAGE_GUIDANCE = {
         "source_docs": ["00-canonical-map.md", "09-runtime-orchestration-steps.md"],
         "required_input_artifacts": ["orchestration_request", "express_direct_handoff"],
         "required_external_mcp_tools": [],
-        "required_sections": ["workflow_mode", "complexity_classification", "direct_workflow_scope"],
+        "required_sections": [
+            "workflow_mode",
+            "complexity_classification",
+            "direct_workflow_scope.allowed_actions",
+            "direct_workflow_scope.excluded_actions",
+            "direct_workflow_scope.cleanup_actions",
+            "express_direct_reason",
+        ],
     },
 }
 
@@ -193,6 +200,7 @@ STAGE_PACKET_TEMPLATES = {
             "direct_workflow_scope": {
                 "allowed_actions": ["normal direct workflow implementation and validation"],
                 "excluded_actions": ["specialist fanout", "architecture completion claims"],
+                "cleanup_actions": ["restore the caller's branch or record why cleanup is deferred"],
             },
             "express_direct_reason": "<why the full architecture loop is unnecessary>",
             "sequential_thinking_ref": "<same ref or use sequential_thinking_waiver>",
@@ -917,6 +925,12 @@ def _validate_express_direct_handoff(packet: dict[str, Any], error) -> None:
         scope,
         "excluded_actions",
         "orchestration_request.direct_workflow_scope.excluded_actions",
+        error,
+    )
+    _require_non_empty_string_list(
+        scope,
+        "cleanup_actions",
+        "orchestration_request.direct_workflow_scope.cleanup_actions",
         error,
     )
 

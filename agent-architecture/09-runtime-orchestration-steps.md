@@ -28,10 +28,10 @@ This path mirrors Maestro's Express workflow for simple tasks. It is allowed onl
 1. The work is simple, low-risk, and single-lane.
 2. The work does not require specialist fanout, task-design alternatives, formal review distribution, feedbackgate judgment, or feedback-loop artifact reuse.
 3. `$orchestrator` attempted `MCP_DOCKER.sequentialthinking` or recorded `sequential_thinking_waiver`.
-4. `$orchestrator` emits `orchestration_request` with `architecture_required=false`, `workflow_mode="express-direct"`, `complexity_classification` in `simple`, `direct`, or `low-risk`, and `next_owner="direct-workflow"`.
+4. `$orchestrator` emits `orchestration_request` with `architecture_required=false`, `workflow_mode="express-direct"`, `complexity_classification` in `simple`, `direct`, or `low-risk`, `direct_workflow_scope.allowed_actions`, `direct_workflow_scope.excluded_actions`, `direct_workflow_scope.cleanup_actions`, `express_direct_reason`, and `next_owner="direct-workflow"`.
 5. `validate_stage_packet.valid=true`, `validate_tool_sequence.valid=true`, and MCP quiescence evidence are present.
 
-After this handoff, resume the normal direct workflow: implement, test, commit, PR, or answer as the user requested. Do not claim architecture completion, reviewer coverage, or feedbackgate approval from an express-direct handoff.
+After this handoff, resume the normal direct workflow: implement, test, commit, PR, or answer as the user requested. Complete or explicitly defer the declared `cleanup_actions`; for PR work this should distinguish local branch/worktree cleanup from any remote head branch that must remain until merge. Do not claim architecture completion, reviewer coverage, or feedbackgate approval from an express-direct handoff.
 
 ## Context Ledger Barrier
 

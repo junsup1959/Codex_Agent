@@ -44,7 +44,7 @@ Return only after these API results are present:
 Emit one `orchestration_request`.
 
 - Full architecture path: include scope, exclusions, success criteria, risk flags, feedback carryover, any `task_design_reentry_decision`, `sequential_thinking_ref` or `sequential_thinking_waiver`, `context_delta`, artifact/evidence refs, `architecture_required=true`, and `next_owner="context-ledger"`.
-- Express-direct path: only for simple, low-risk, single-lane work that does not need specialist fanout, task-design alternatives, formal review distribution, feedbackgate judgment, or feedback-loop artifact reuse. Include `architecture_required=false`, `workflow_mode="express-direct"`, `complexity_classification`, `direct_workflow_scope`, `express_direct_reason`, and `next_owner="direct-workflow"`.
+- Express-direct path: only for simple, low-risk, single-lane work that does not need specialist fanout, task-design alternatives, formal review distribution, feedbackgate judgment, or feedback-loop artifact reuse. Include `architecture_required=false`, `workflow_mode="express-direct"`, `complexity_classification`, `direct_workflow_scope`, `express_direct_reason`, and `next_owner="direct-workflow"`. The `direct_workflow_scope` object must include non-empty `allowed_actions`, `excluded_actions`, and `cleanup_actions` lists; for PR/publish tasks, cleanup must explicitly cover branch or worktree cleanup after publishing.
 
 ## Stage Packet Shape
 
@@ -106,7 +106,8 @@ Express-direct stage packet shape:
     "complexity_classification": "simple",
     "direct_workflow_scope": {
       "allowed_actions": ["normal direct workflow implementation and validation"],
-      "excluded_actions": ["specialist fanout", "architecture completion claims"]
+      "excluded_actions": ["specialist fanout", "architecture completion claims"],
+      "cleanup_actions": ["restore the caller's branch or record why cleanup is deferred"]
     },
     "express_direct_reason": "<why the full architecture loop is unnecessary>",
     "sequential_thinking_ref": "<same ref or use sequential_thinking_waiver>",
