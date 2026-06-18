@@ -20,6 +20,7 @@ Record these fields in the PR body or automation memory:
 | Review state | Review, inline review-comment, and issue-comment counts |
 | Dependency decision | Independent of open PRs, stacked on an open PR, or blocked by an open PR |
 | Conflict check | Files changed by the open PR compared with files changed by this PR |
+| Open PR relationship | For every open automation PR: `independent`, `stacked`, or `blocked`, with the exact file-overlap reason |
 | Validation | Exact commands run and whether failures are functional or formatting-only |
 | Cleanup policy | Local branch deleted, remote PR head retained, or remote branch deletion reason |
 
@@ -45,6 +46,7 @@ When `git fetch` is blocked, use the GitHub connector or REST API for PR metadat
 - Review evidence: `<reviews>` reviews, `<inline-comments>` inline comments, `<issue-comments>` issue comments.
 - Dependency decision: `<independent|stacked|blocked>` because `<reason>`.
 - Conflict check: `<files>` overlap status.
+- Open PR relationship: `#<n>` is `<independent|stacked|blocked>` because `<changed-file comparison>`.
 
 ## Validation
 
@@ -60,5 +62,6 @@ When `git fetch` is blocked, use the GitHub connector or REST API for PR metadat
 
 - PR #8 merged into `master` as `ccf7fbc333cbff231efad0cc7c92a0e09c37cec1`.
 - PR #9 is open as draft from `codex/express-direct-cleanup-scope` at `1a0db5475e7e89ea45da278deb05bd2d3342d372`.
-- PR #8 and PR #9 review, inline review-comment, and issue-comment endpoints returned empty arrays on 2026-06-16.
-- A follow-up PR that only updates `docs/` is independent of PR #9's validator and test changes, but it should still mention PR #9 as an open automation PR.
+- PR #10 is open as draft from `codex/pr-evidence-growth-map-20260616` at `fadcd2c911adec25a9c99f6057f98b89f0755c10`.
+- GitHub's combined PR discussion fetch returned no comments for PR #8, PR #9, and PR #10 on 2026-06-18. Earlier automation notes also recorded no fetched comments or review threads for PR #8 and PR #9 on 2026-06-16.
+- A follow-up that only updates PR #10's `docs/` files should update PR #10 instead of creating a duplicate PR, while PR #9 remains independent because it owns validator, test, and orchestration contract files.
