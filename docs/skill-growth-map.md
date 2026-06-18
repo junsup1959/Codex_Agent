@@ -4,7 +4,7 @@ Last updated: 2026-06-18
 
 ## Evidence Base
 
-- PR #10, "[codex] Document automation PR evidence checklist", is open as a draft on branch `codex/pr-evidence-growth-map-20260616` at `fadcd2c911adec25a9c99f6057f98b89f0755c10`. It adds this growth map and the automation PR evidence checklist, and is intentionally documentation-only so it does not overlap PR #9's validator/test files.
+- PR #10, "[codex] Document automation PR evidence checklist", is open as a draft on branch `codex/pr-evidence-growth-map-20260616`. It adds this growth map and the automation PR evidence checklist, and is intentionally documentation-only so it does not overlap PR #9's validator/test files. Because PR #10 updates this same document, fetch the live PR head SHA before citing it.
 - PR #9, "[codex] Require express direct cleanup scope", is open as a draft on branch `codex/express-direct-cleanup-scope` at `1a0db5475e7e89ea45da278deb05bd2d3342d372`. It extends the express-direct handoff with explicit `direct_workflow_scope.cleanup_actions` and documents the local-vs-remote branch cleanup distinction.
 - PR #8, "[codex] Validate express direct handoff fields", was merged into `master` on 2026-06-14. It made express-direct `allowed_actions`, `excluded_actions`, and `express_direct_reason` required validator fields.
 - PR #7, "Add compact orchestrator direct workflow", was merged into `master` on 2026-06-01. It added the `orchestrator -> direct-workflow` path, express-direct validation, contract/docs updates, and runtime smoke evidence for `build_next_stage_guidance('direct-workflow')`.
@@ -67,7 +67,7 @@ Done when:
 
 Evidence:
 - PR #6 and PR #7 were previously merged on GitHub while local refs could still appear stale under constrained fetch or credential conditions.
-- On 2026-06-18, `git ls-remote` showed `refs/heads/master` at `ccf7fbc333cbff231efad0cc7c92a0e09c37cec1`, PR #9's remote head at `1a0db5475e7e89ea45da278deb05bd2d3342d372`, and PR #10's remote head at `fadcd2c911adec25a9c99f6057f98b89f0755c10`.
+- On 2026-06-18, `git ls-remote` showed `refs/heads/master` at `ccf7fbc333cbff231efad0cc7c92a0e09c37cec1` and PR #9's remote head at `1a0db5475e7e89ea45da278deb05bd2d3342d372`. PR #10 updates this document on its own head branch, so its current head SHA should be fetched live before publication.
 
 Practice:
 - Compare local branch, remote-tracking branch, GitHub PR merge SHA, PR head SHA, and `git ls-remote` SHA before claiming merge state.

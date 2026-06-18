@@ -62,6 +62,6 @@ When `git fetch` is blocked, use the GitHub connector or REST API for PR metadat
 
 - PR #8 merged into `master` as `ccf7fbc333cbff231efad0cc7c92a0e09c37cec1`.
 - PR #9 is open as draft from `codex/express-direct-cleanup-scope` at `1a0db5475e7e89ea45da278deb05bd2d3342d372`.
-- PR #10 is open as draft from `codex/pr-evidence-growth-map-20260616` at `fadcd2c911adec25a9c99f6057f98b89f0755c10`.
+- PR #10 is open as draft from `codex/pr-evidence-growth-map-20260616`; because the PR updates this same document, fetch the live PR head SHA before citing it.
 - GitHub's combined PR discussion fetch returned no comments for PR #8, PR #9, and PR #10 on 2026-06-18. Earlier automation notes also recorded no fetched comments or review threads for PR #8 and PR #9 on 2026-06-16.
 - A follow-up that only updates PR #10's `docs/` files should update PR #10 instead of creating a duplicate PR, while PR #9 remains independent because it owns validator, test, and orchestration contract files.
