@@ -1,6 +1,6 @@
 # Skill Growth Map
 
-Last updated: 2026-06-18
+Last updated: 2026-06-19
 
 ## Evidence Base
 
@@ -11,7 +11,8 @@ Last updated: 2026-06-18
 - PR #6, "Fix meta orchestration stage references", was merged into `master` on 2026-06-01. It replaced stale `task-planner` references with the current `task-designer` / `task-distributor` split across `agents/09-meta-orchestration`.
 - PR #5, "Block unvalidated task design fallback", fixed validator exposure, stage packet shape guidance, and top-level orchestrator packet mismatches after runtime sessions exposed unvalidated fallback behavior.
 - PR #4, "Split planning stages and add reentry evidence", introduced the task-designer/task-distributor split, `artifact_profile`, `reentry_cache`, sequential-thinking waiver evidence, and broader flow validation.
-- GitHub's combined PR discussion fetch returned no comments for PR #8, PR #9, and PR #10 on 2026-06-18. Earlier automation notes also recorded no fetched comments or review threads for PR #8 and PR #9 on 2026-06-16. The recommendations below therefore rely on PR subjects, PR bodies, diffs, validation notes, branch state, and repeated automation findings rather than reviewer comments.
+- GitHub's combined PR discussion fetch returned no comments for PR #8, PR #9, and PR #10 on 2026-06-19. Earlier automation notes also recorded no fetched comments or review threads for PR #8 and PR #9 on 2026-06-16. The recommendations below therefore rely on PR subjects, PR bodies, diffs, validation notes, branch state, and repeated automation findings rather than reviewer comments.
+- The local automation environment currently has no `gh` CLI; publication must combine Git operations (`push`/branch handling) with GitHub connector PR metadata operations (create/update comments/labels).
 
 ## Recommended Growth Areas
 
@@ -68,6 +69,7 @@ Done when:
 Evidence:
 - PR #6 and PR #7 were previously merged on GitHub while local refs could still appear stale under constrained fetch or credential conditions.
 - On 2026-06-18, `git ls-remote` showed `refs/heads/master` at `ccf7fbc333cbff231efad0cc7c92a0e09c37cec1` and PR #9's remote head at `1a0db5475e7e89ea45da278deb05bd2d3342d372`. PR #10 updates this document on its own head branch, so its current head SHA should be fetched live before publication.
+- PR #9/#10 workflows currently require a fallback publication path: Git handles branch, commit, and push; GitHub connector handles PR metadata/actions when `gh` CLI is unavailable.
 
 Practice:
 - Compare local branch, remote-tracking branch, GitHub PR merge SHA, PR head SHA, and `git ls-remote` SHA before claiming merge state.
@@ -120,6 +122,27 @@ Practice:
 
 Done when:
 - You can diagnose a missing validator as approval drift, runtime-source drift, session hot-reload drift, or contract drift within one pass.
+
+### 8. Publication Fallback Discipline (No `gh` CLI)
+
+Evidence:
+- PR #8 is merged and PR #9/#10 are current drafts in a local environment with no `gh` CLI.
+- PR #9 added cleanup behavior that retains remote PR head branch while deleting local branch after publish.
+- PR #10 is documentation-only and currently relies on an open-draft PR workflow, so branch lifecycle evidence is part of the recommendation, not implicit release behavior.
+- Combined PR/review/comment fetches were empty for PR #8, PR #9, and PR #10 on 2026-06-19, so review evidence is represented by explicit fetch results and counts only.
+
+Practice:
+- Define a hard publication split:
+  1. Use Git for branch creation/updates, commits, and `git push`.
+  2. Use GitHub connector APIs for PR metadata, labels, comments, and PR-state reads when `gh` is unavailable.
+  3. Record source-of-truth for each data point (`git`, `git ls-remote`, connector payload, connector PR body state).
+- Set explicit cleanup policy in PR docs and automation evidence:
+  - Local branch: delete only after a successful publication push when PR remains draft/open.
+  - Remote PR head branch: retain until merge/close decision is final.
+- Treat "no review comments returned" as explicit evidence, and do not infer review intent beyond the returned counts.
+
+Done when:
+- The same recommendation can be executed from an environment without `gh` and still prove publication, cleanup choice, and review-state evidence without assumptions.
 
 ## Next Concrete Drill
 
