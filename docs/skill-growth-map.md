@@ -1,6 +1,6 @@
 # Skill Growth Map
 
-Last updated: 2026-06-19
+Last updated: 2026-06-20
 
 ## Evidence Base
 
@@ -11,7 +11,8 @@ Last updated: 2026-06-19
 - PR #6, "Fix meta orchestration stage references", was merged into `master` on 2026-06-01. It replaced stale `task-planner` references with the current `task-designer` / `task-distributor` split across `agents/09-meta-orchestration`.
 - PR #5, "Block unvalidated task design fallback", fixed validator exposure, stage packet shape guidance, and top-level orchestrator packet mismatches after runtime sessions exposed unvalidated fallback behavior.
 - PR #4, "Split planning stages and add reentry evidence", introduced the task-designer/task-distributor split, `artifact_profile`, `reentry_cache`, sequential-thinking waiver evidence, and broader flow validation.
-- GitHub's combined PR discussion fetch returned no comments for PR #8, PR #9, and PR #10 on 2026-06-19. Earlier automation notes also recorded no fetched comments or review threads for PR #8 and PR #9 on 2026-06-16. The recommendations below therefore rely on PR subjects, PR bodies, diffs, validation notes, branch state, and repeated automation findings rather than reviewer comments.
+- PR #10 review threads were empty on 2026-06-20.
+- GitHub's combined PR discussion fetch returned no comments for PR #8, PR #9, and PR #10 on 2026-06-20 and 2026-06-19. Earlier automation notes also recorded no fetched comments or review threads for PR #8 and PR #9 on 2026-06-16. The recommendations below therefore rely on PR subjects, PR bodies, diffs, validation notes, branch state, and repeated automation findings rather than reviewer comments.
 - The local automation environment currently has no `gh` CLI; publication must combine Git operations (`push`/branch handling) with GitHub connector PR metadata operations (create/update comments/labels).
 
 ## Recommended Growth Areas
@@ -129,7 +130,7 @@ Evidence:
 - PR #8 is merged and PR #9/#10 are current drafts in a local environment with no `gh` CLI.
 - PR #9 added cleanup behavior that retains remote PR head branch while deleting local branch after publish.
 - PR #10 is documentation-only and currently relies on an open-draft PR workflow, so branch lifecycle evidence is part of the recommendation, not implicit release behavior.
-- Combined PR/review/comment fetches were empty for PR #8, PR #9, and PR #10 on 2026-06-19, so review evidence is represented by explicit fetch results and counts only.
+- Combined PR/review/comment fetches were empty for PR #8, PR #9, and PR #10 on 2026-06-20 (and 2026-06-19), so review evidence is represented by explicit fetch results and counts only.
 
 Practice:
 - Define a hard publication split:
@@ -144,6 +145,22 @@ Practice:
 Done when:
 - The same recommendation can be executed from an environment without `gh` and still prove publication, cleanup choice, and review-state evidence without assumptions.
 
+### 9. Evidence Freshness and Timestamp Discipline
+
+Evidence:
+- PR #10 is a docs-only follow-up that references itself (`docs/automation-pr-evidence-checklist.md` and `docs/skill-growth-map.md`), so automation repeatedly had to avoid stale `checked_at` and stale head SHA/date values in self-referential evidence.
+- PR #10 head hash `6136e59` is fixed historical evidence observed at 2026-06-20T00:05:22Z before this follow-up commit; current PR head values must be re-fetched live before each evidence claim to prevent stale citations and date drift.
+- PR discussion/threads for PR #10 were empty on 2026-06-20, matching the prior-day empty comment runs; this can only be trusted if evidence has explicit freshness context.
+
+Practice:
+- Capture `checked_at` for every evidence run and persist it in PR body and automation memory.
+- For each PR claim, record source-of-truth (`git`, `git ls-remote`, connector payload, REST, or GitHub UI).
+- Record freshness trigger (`before-open`, `before-update`, `before-push`, `before-merge-check`) and refresh policy when trigger time is exceeded.
+- For each SHA/date value, explicitly mark capture mode: `live-fetched` (current lookup) or `fixed` (historical reference with reason + TTL).
+
+Done when:
+- A future reviewer can detect, per evidence item, whether PR state is current or intentionally historical without asking for a fresh fetch.
+
 ## Next Concrete Drill
 
-Use the PR evidence packet checklist before the next automation-created PR, and add the open-PR relationship classification before writing files. It directly addresses the newest recurring pattern: compact workflow changes now span PR #7, PR #8, open PR #9, and open PR #10, while merge state, review evidence, validation evidence, file ownership, and branch cleanup policy can drift independently.
+Use the PR evidence packet checklist before the next automation-created PR, and include `checked_at`, evidence source, freshness trigger, and SHA/date mode (`live-fetched` or `fixed`) in the PR-body evidence block. It directly addresses the recurring pattern in PR #10 where review fetches stayed empty and branch/SHA fields can look stable while still becoming stale.
