@@ -83,7 +83,7 @@ When `gh` CLI is unavailable, use the GitHub connector to create/update PR metad
 
 - PR #8 merged into `master` as `ccf7fbc333cbff231efad0cc7c92a0e09c37cec1`.
 - PR #9 is open as draft from `codex/express-direct-cleanup-scope` at `1a0db5475e7e89ea45da278deb05bd2d3342d372`.
-- PR #10 is open as draft from `codex/pr-evidence-growth-map-20260616` at `8e56e383f33d69451c1ff8106e8c25e071024468`.
+- PR #10 is open as draft from `codex/pr-evidence-growth-map-20260616`; because this checklist lives on that same PR branch, fetch the live PR head SHA before citing it.
 - PR relationship snapshot at `2026-06-21T00:05:26Z`:
   - `#9`: state=`open`, head=`1a0db5475e7e89ea45da278deb05bd2d3342d372`, base=`ccf7fbc333cbff231efad0cc7c92a0e09c37cec1`, dependency=`independent`, overlap=`none`, compare=`ahead=1 behind=0`, status=`ready`, review state=`0 reviews, 0 inline comments, 0 issue comments`.
   - `#10` is the current target PR and is not included in the open-PR dependency matrix by definition. review state for current target: `0 reviews, 0 inline comments, 0 issue comments`.

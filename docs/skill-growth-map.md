@@ -4,7 +4,7 @@ Last updated: 2026-06-21
 
 ## Evidence Base
 
-- PR #10, "[codex] Document automation PR evidence checklist", is open as a draft on branch `codex/pr-evidence-growth-map-20260616` at `8e56e383f33d69451c1ff8106e8c25e071024468`. It adds this growth map and the automation PR evidence checklist, and is intentionally documentation-only so it does not overlap PR #9's validator/test files. Because PR #10 updates this same document, fetch the live PR head SHA before citing it.
+- PR #10, "[codex] Document automation PR evidence checklist", is open as a draft on branch `codex/pr-evidence-growth-map-20260616`. It adds this growth map and the automation PR evidence checklist, and is intentionally documentation-only so it does not overlap PR #9's validator/test files. Because PR #10 updates this same document, fetch the live PR head SHA before citing it instead of storing it as a fixed value here.
 - PR #9, "[codex] Require express direct cleanup scope", is open as a draft on branch `codex/express-direct-cleanup-scope` at `1a0db5475e7e89ea45da278deb05bd2d3342d372`. It extends the express-direct handoff with explicit `direct_workflow_scope.cleanup_actions` and documents the local-vs-remote branch cleanup distinction.
 - PR #8, "[codex] Validate express direct handoff fields", was merged into `master` on 2026-06-14. It made express-direct `allowed_actions`, `excluded_actions`, and `express_direct_reason` required validator fields.
 - PR #7, "Add compact orchestrator direct workflow", was merged into `master` on 2026-06-01. It added the `orchestrator -> direct-workflow` path, express-direct validation, contract/docs updates, and runtime smoke evidence for `build_next_stage_guidance('direct-workflow')`.
@@ -173,7 +173,7 @@ Done when:
 
 Evidence:
 - PR #10 is a docs-only follow-up that references itself (`docs/automation-pr-evidence-checklist.md` and `docs/skill-growth-map.md`), so automation repeatedly had to avoid stale `checked_at` and stale head SHA/date values in self-referential evidence.
-- PR #10 head for this run is `8e56e383f33d69451c1ff8106e8c25e071024468`; this value must be live-fetched before each evidence claim.
+- PR #10 head for each run must be live-fetched before evidence claims; do not store the current PR's own moving head SHA as a fixed value in this document.
 - PR #10 inline comments and issue comments were empty on 2026-06-21; this can only be trusted if evidence has explicit freshness context.
 
 Practice:
