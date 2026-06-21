@@ -18,10 +18,13 @@ Record these fields in the PR body or automation memory:
 | checked_at | UTC timestamp when this evidence packet was collected |
 | Default branch state | `git ls-remote origin refs/heads/master` or GitHub REST default-branch SHA |
 | Evidence source map | Per-item source for each claim (`git`, `git ls-remote`, GitHub connector payload, GitHub REST, GitHub UI) |
+| Open PR dependency map | Per open PR: id, title, state, base/head SHA, base branch, reviewed state, and `independent|stacked|blocked` verdict |
+| Changed-file ownership proof | Full changed-file list per open PR and explicit overlap reason |
 | Open PR state | PR number, title, state, head branch, head SHA, labels |
-| Review state | Review, inline review-comment, and issue-comment counts (or explicit empty arrays with source) |
+| Review state | Review, inline comments, and issue comments counts (or explicit empty arrays with source) |
+| Compare readiness | Base/head SHA compare result, `ahead/behind` counts, and rebase status (`ready|needs-rebase|blocked`) |
 | Freshness trigger | Event that requires this evidence (`before-open`, `before-update`, `before-push`, `before-merge-check`) |
-| Dependency decision | Independent of open PRs, stacked on an open PR, or blocked by an open PR |
+| Dependency decision | Independent of open PRs, stacked on an open PR, blocked by an open PR, or requires rebase before update |
 | Conflict check | Files changed by the open PR compared with files changed by this PR |
 | Open PR relationship | For every open automation PR: `independent`, `stacked`, or `blocked`, with the exact file-overlap reason |
 | SHA/date capture mode | `live-fetched` for current values, `fixed` for intentional historical values with TTL/expiration rationale |
@@ -34,15 +37,18 @@ Record these fields in the PR body or automation memory:
 ```powershell
 (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 git fetch origin --prune
+git remote update --prune
 git ls-remote origin refs/heads/master refs/heads/<candidate-branch>
+git rev-list --left-right --count <base-ref>...<head-ref>
 git log --oneline --decorate --max-count=10 origin/master
 git diff --stat origin/master...HEAD
 git diff --check
 git push origin <candidate-branch>
+git show --no-patch --pretty=fuller origin/<base-branch>..origin/<head-branch>
 ```
 
 When `git fetch` is blocked, use the GitHub connector or REST API for PR metadata and keep `git ls-remote` as the remote SHA check.
-When `gh` CLI is unavailable, use the GitHub connector to create/update PR metadata, labels, and comments.
+When `gh` CLI is unavailable, use the GitHub connector to create/update PR metadata, labels, comments, and per-PR compare state.
 
 ## PR Body Template
 
@@ -56,9 +62,12 @@ When `gh` CLI is unavailable, use the GitHub connector to create/update PR metad
 - Head/base date notes: `<sha/date>` is `<live-fetched|fixed>` at `<checked_at>` because `<reason>`.
 - Review evidence: `<reviews>` reviews, `<inline-comments>` inline comments, `<issue-comments>` issue comments (source: `<source>`).
 - Tooling path: `<git|github-connector|both>`, `gh` availability `<yes|no>`, fallback `<N/A|connector metadata>`.
-- Dependency decision: `<independent|stacked|blocked>` because `<reason>`.
+- Open PR dependency matrix:
+  - `#<n>`: dependency=`<independent|stacked|blocked|needs-rebase>`, reason=`<changed-files|head conflict|review hold>`, overlap=`<files|none>`, compare=`base=<base-sha> head=<head-sha> ahead=<n> behind=<n>`, status=`<ready|needs-rebase|blocked>`, source=`<source>`, mode=`<live-fetched|fixed>`.
+- Dependency decision: `<independent|stacked|blocked|needs-rebase>` for the target PR with summary reason and required follow-up.
 - Conflict check: `<files>` overlap status.
 - Open PR relationship: `#<n>` is `<independent|stacked|blocked>` because `<changed-file comparison>`.
+- Rebase readiness action plan: `<action>` (for example: `rebase #<n> before update`, `hold update`, `update independent`).
 
 ## Validation
 
@@ -74,7 +83,11 @@ When `gh` CLI is unavailable, use the GitHub connector to create/update PR metad
 
 - PR #8 merged into `master` as `ccf7fbc333cbff231efad0cc7c92a0e09c37cec1`.
 - PR #9 is open as draft from `codex/express-direct-cleanup-scope` at `1a0db5475e7e89ea45da278deb05bd2d3342d372`.
-- PR #10 is open as draft from `codex/pr-evidence-growth-map-20260616`; because the PR updates this same document, fetch the live PR head SHA before citing it (live-fetched mode only).
-- GitHub's combined PR discussion fetch returned no comments for PR #8, PR #9, and PR #10 on 2026-06-20 and 2026-06-19. PR #10 review threads were empty on 2026-06-20, and the GitHub UI showed 0 reviews on 2026-06-20. Earlier automation notes also recorded no fetched comments or review threads for PR #8 and PR #9 on 2026-06-16.
+- PR #10 is open as draft from `codex/pr-evidence-growth-map-20260616` at `8e56e383f33d69451c1ff8106e8c25e071024468`.
+- PR relationship snapshot at `2026-06-21T00:05:26Z`:
+  - `#9`: state=`open`, head=`1a0db5475e7e89ea45da278deb05bd2d3342d372`, base=`ccf7fbc333cbff231efad0cc7c92a0e09c37cec1`, dependency=`independent`, overlap=`none`, compare=`ahead=1 behind=0`, status=`ready`, review state=`0 reviews, 0 inline comments, 0 issue comments`.
+  - `#10` is the current target PR and is not included in the open-PR dependency matrix by definition. review state for current target: `0 reviews, 0 inline comments, 0 issue comments`.
+- GitHub's combined PR discussion fetch returned no reviews, no inline comments, and no issue comments for PR #8, PR #9, and PR #10 on 2026-06-21 (live-fetched); PR #8 was also checked through explicit review and review-thread connector calls.
+- PR #9 and PR #10 are independent by changed-file ownership, but both target `master` `ccf7fbc333cbff231efad0cc7c92a0e09c37cec1`; rebase/conflict readiness must still be checked before publication updates.
 - Local environment has no `gh` CLI; use Git for code movement and the GitHub connector for PR metadata/labels/comments.
 - A follow-up that only updates PR #10's `docs/` files should update PR #10 instead of creating a duplicate PR, while PR #9 remains independent because it owns validator, test, and orchestration contract files.
