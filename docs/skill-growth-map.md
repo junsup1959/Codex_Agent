@@ -1,18 +1,18 @@
 # Skill Growth Map
 
-Last updated: 2026-06-21
+Last updated: 2026-06-22
 
 ## Evidence Base
 
-- PR #10, "[codex] Document automation PR evidence checklist", is open as a draft on branch `codex/pr-evidence-growth-map-20260616`. It adds this growth map and the automation PR evidence checklist, and is intentionally documentation-only so it does not overlap PR #9's validator/test files. Because PR #10 updates this same document, fetch the live PR head SHA before citing it instead of storing it as a fixed value here.
+- PR #10, "[codex] Document automation PR evidence checklist", is open as a draft on branch `codex/pr-evidence-growth-map-20260616`. It adds this growth map and the automation PR evidence checklist, and is intentionally documentation-only so it does not overlap PR #9's validator/test files. Because PR #10 updates this same document, fetch the live PR head SHA before citing it instead of storing it as a fixed value here. This PR is also the source for its own evidence protocol, so publication updates must verify post-push self-refresh before claiming current evidence.
 - PR #9, "[codex] Require express direct cleanup scope", is open as a draft on branch `codex/express-direct-cleanup-scope` at `1a0db5475e7e89ea45da278deb05bd2d3342d372`. It extends the express-direct handoff with explicit `direct_workflow_scope.cleanup_actions` and documents the local-vs-remote branch cleanup distinction.
 - PR #8, "[codex] Validate express direct handoff fields", was merged into `master` on 2026-06-14. It made express-direct `allowed_actions`, `excluded_actions`, and `express_direct_reason` required validator fields.
 - PR #7, "Add compact orchestrator direct workflow", was merged into `master` on 2026-06-01. It added the `orchestrator -> direct-workflow` path, express-direct validation, contract/docs updates, and runtime smoke evidence for `build_next_stage_guidance('direct-workflow')`.
 - PR #6, "Fix meta orchestration stage references", was merged into `master` on 2026-06-01. It replaced stale `task-planner` references with the current `task-designer` / `task-distributor` split across `agents/09-meta-orchestration`.
 - PR #5, "Block unvalidated task design fallback", fixed validator exposure, stage packet shape guidance, and top-level orchestrator packet mismatches after runtime sessions exposed unvalidated fallback behavior.
 - PR #4, "Split planning stages and add reentry evidence", introduced the task-designer/task-distributor split, `artifact_profile`, `reentry_cache`, sequential-thinking waiver evidence, and broader flow validation.
-- PR #10 inline comments and issue comments were empty via connector on 2026-06-21.
-- GitHub's combined PR discussion fetch returned no reviews, inline comments, or issue comments for PR #8, PR #9, and PR #10 on 2026-06-21; PR #8 also had empty explicit review and review-thread connector results. The recommendations below therefore rely on PR subjects, PR bodies, diffs, validation notes, branch state, and repeated automation findings rather than reviewer comments.
+- PR #10 inline comments and issue comments were empty via connector on 2026-06-22.
+- GitHub's combined PR discussion fetch returned no reviews, inline comments, or issue comments for PR #8, PR #9, and PR #10 on 2026-06-22; PR #8, PR #9, and PR #10 also had empty review-thread connector results. The recommendations below therefore rely on PR subjects, PR bodies, diffs, validation notes, branch state, and repeated automation findings rather than reviewer comments.
 - The local automation environment currently has no `gh` CLI; publication must combine Git operations (`push`/branch handling) with GitHub connector PR metadata operations (create/update comments/labels).
 
 ## Recommended Growth Areas
@@ -154,7 +154,7 @@ Evidence:
 - PR #8 is merged and PR #9/#10 are current drafts in a local environment with no `gh` CLI.
 - PR #9 added cleanup behavior that retains remote PR head branch while deleting local branch after publish.
 - PR #10 is documentation-only and currently relies on an open-draft PR workflow, so branch lifecycle evidence is part of the recommendation, not implicit release behavior.
-- Combined PR/review/comment fetches were empty for PR #8, PR #9, and PR #10 on 2026-06-21, so review evidence is represented by explicit fetch results and counts only.
+- Combined PR/review/comment fetches were empty for PR #8, PR #9, and PR #10 on 2026-06-22, so review evidence is represented by explicit fetch results and counts only.
 
 Practice:
 - Define a hard publication split:
@@ -169,22 +169,23 @@ Practice:
 Done when:
 - The same recommendation can be executed from an environment without `gh` and still prove publication, cleanup choice, and review-state evidence without assumptions.
 
-### 10. Evidence Freshness and Timestamp Discipline
+### 10. Self-Referential PR Evidence Freshness
 
 Evidence:
 - PR #10 is a docs-only follow-up that references itself (`docs/automation-pr-evidence-checklist.md` and `docs/skill-growth-map.md`), so automation repeatedly had to avoid stale `checked_at` and stale head SHA/date values in self-referential evidence.
 - PR #10 head for each run must be live-fetched before evidence claims; do not store the current PR's own moving head SHA as a fixed value in this document.
-- PR #10 inline comments and issue comments were empty on 2026-06-21; this can only be trusted if evidence has explicit freshness context.
+- PR #10 inline comments and issue comments were empty on 2026-06-22; this can only be trusted if evidence has explicit freshness context.
+- PR #10's branch can be pushed successfully while the PR body still cites a previous current head or previous `checked_at`, so body refresh is a separate publication obligation.
 
 Practice:
-- Capture `checked_at` for every evidence run and persist it in PR body and automation memory.
-- For each PR claim, record source-of-truth (`git`, `git ls-remote`, connector payload, REST, or GitHub UI).
-- Record freshness trigger (`before-open`, `before-update`, `before-push`, `before-merge-check`) and refresh policy when trigger time is exceeded.
-- For each SHA/date value, explicitly mark capture mode: `live-fetched` (current lookup) or `fixed` (historical reference with reason + TTL).
+- Before updating a docs-only PR body that cites itself, capture pre-push and post-push values for `checked_at`, PR head SHA, and the PR body evidence block.
+- Use this sequence: push, refetch remote head, regenerate evidence, overwrite PR body, then verify stale values were removed.
+- Treat stale `checked_at` or stale current-head values in the PR body as an update failure, even when compare/readiness and review/comment data are otherwise valid.
+- Keep historical SHAs only when they are explicitly marked `fixed` with a reason; current PR head values must be `live-fetched`.
 
 Done when:
-- A future reviewer can detect, per evidence item, whether PR state is current or intentionally historical without asking for a fresh fetch.
+- A future reviewer can tell that the PR body was refreshed after the latest push and no longer carries previous live-evidence values as if they were current.
 
 ## Next Concrete Drill
 
-Use the PR evidence packet checklist before the next automation-created PR, and include `checked_at`, evidence source, freshness trigger, SHA/date mode (`live-fetched` or `fixed`), and explicit `open PR dependency matrix` plus rebase-readiness status in the PR-body evidence block. This directly addresses the open PR dependency/rebase discipline gap in PR #10, where PR #9 and PR #10 are independent by changed files but share the same base and require compare checks before publication updates.
+Before the next PR update, execute: (1) push the follow-up commit to the existing PR #10 branch, (2) fetch `origin/codex/pr-evidence-growth-map-20260616` and capture the new head, (3) rewrite PR #10 body with post-push evidence (`checked_at`, `head`, source, freshness trigger), (4) verify the PR body no longer cites stale pre-push values as live evidence, and (5) only then run final merge-readiness evidence checks.
