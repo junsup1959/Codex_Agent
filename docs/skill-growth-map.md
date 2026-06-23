@@ -1,6 +1,6 @@
 # Skill Growth Map
 
-Last updated: 2026-06-22
+Last updated: 2026-06-23
 
 ## Evidence Base
 
@@ -12,6 +12,7 @@ Last updated: 2026-06-22
 - PR #5, "Block unvalidated task design fallback", fixed validator exposure, stage packet shape guidance, and top-level orchestrator packet mismatches after runtime sessions exposed unvalidated fallback behavior.
 - PR #4, "Split planning stages and add reentry evidence", introduced the task-designer/task-distributor split, `artifact_profile`, `reentry_cache`, sequential-thinking waiver evidence, and broader flow validation.
 - PR #10 inline comments and issue comments were empty via connector on 2026-06-22.
+- On 2026-06-23, PR #10 pre-push head was `cbc5ee20550ae0be035d0e182baa82c607f192ea`; live fetch is still required after push.
 - GitHub's combined PR discussion fetch returned no reviews, inline comments, or issue comments for PR #8, PR #9, and PR #10 on 2026-06-22; PR #8, PR #9, and PR #10 also had empty review-thread connector results. The recommendations below therefore rely on PR subjects, PR bodies, diffs, validation notes, branch state, and repeated automation findings rather than reviewer comments.
 - The local automation environment currently has no `gh` CLI; publication must combine Git operations (`push`/branch handling) with GitHub connector PR metadata operations (create/update comments/labels).
 
@@ -186,6 +187,31 @@ Practice:
 Done when:
 - A future reviewer can tell that the PR body was refreshed after the latest push and no longer carries previous live-evidence values as if they were current.
 
+### 11. Publication Closure Verification
+
+Evidence:
+- PR #9 introduced cleanup-actions that separate local branch cleanup from remote PR-head retention during publication.
+- PR #10 is self-referential to these docs and requires post-push PR-body refresh to keep evidence current.
+- Current run context requires closure checks for PR #10 after every push: labels retrieved from GitHub metadata, body head updated, local cleanup completed, remote branch retained for draft review, and memory sync completed.
+
+Practice:
+- Before finalizing PR #10, execute closure in order:
+  1. Push follow-up commit(s) to existing PR #10 branch.
+  2. Fetch `origin/codex/pr-evidence-growth-map-20260616` and capture the post-push head.
+  3. Fetch PR #10 metadata through the GitHub connector or REST API and capture labels.
+  4. Rewrite PR body and re-fetch it to verify the post-push head and labels are reflected as live evidence.
+  5. Verify PR body has no stale pre-push `checked_at`/head values.
+  6. Apply local branch cleanup only after successful push/body refresh.
+  7. Keep remote PR branch retained while PR #10 remains open draft.
+  8. Append the same closure facts to automation memory.
+
+Done when:
+- PR #10 body shows post-push `head` and labels.
+- PR body stale-check passes for prior `checked_at`/head.
+- Local branch cleanup is recorded with timestamp/reason.
+- Remote PR branch is recorded as retained.
+- Automation memory entries match PR body for labels/head/cleanup state/sources.
+
 ## Next Concrete Drill
 
-Before the next PR update, execute: (1) push the follow-up commit to the existing PR #10 branch, (2) fetch `origin/codex/pr-evidence-growth-map-20260616` and capture the new head, (3) rewrite PR #10 body with post-push evidence (`checked_at`, `head`, source, freshness trigger), (4) verify the PR body no longer cites stale pre-push values as live evidence, and (5) only then run final merge-readiness evidence checks.
+Before the next PR update, execute the closure sequence for PR #10: push -> fetch live head with Git -> fetch labels with GitHub metadata -> PR-body rewrite -> re-fetch -> stale-check -> local cleanup -> automation-memory sync -> final readiness checks.

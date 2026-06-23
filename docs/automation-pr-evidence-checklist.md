@@ -28,6 +28,10 @@ Record these fields in the PR body or automation memory:
 | Conflict check | Files changed by the open PR compared with files changed by this PR |
 | Open PR relationship | For every open automation PR: `independent`, `stacked`, or `blocked`, with the exact file-overlap reason |
 | SHA/date capture mode | `live-fetched` for current values, `fixed` for intentional historical values with TTL/expiration rationale |
+| Publication labels | PR labels and verification source (`GitHub connector payload`) |
+| Branch cleanup evidence | Local branch action, remote branch action, and decision source |
+| Publication closure verification | Pre-push/post-push evidence comparison and stale-body check |
+| Automation-memory sync | Run evidence persisted in automation memory with matching label/branch/head facts |
 | Post-push self-refresh evidence | For self-referential PR updates, pre-push and post-push `checked_at` plus PR `head` values |
 | Validation | Exact commands run and whether failures are functional or formatting-only |
 | Publication tooling | Whether `gh` CLI was available; if not, explicit Git+GitHub connector fallback used |
@@ -50,12 +54,14 @@ git push origin <candidate-branch>
 git fetch origin <candidate-branch> --prune
 git rev-parse origin/<candidate-branch>
 git log -n 1 --format="%H %aI" origin/<candidate-branch>
+git branch --list
+git branch -d <candidate-branch>
 git show --no-patch --pretty=fuller origin/<base-branch>..origin/<head-branch>
 git ls-remote origin refs/heads/<candidate-branch>
 ```
 
 When `git fetch` is blocked, use the GitHub connector or REST API for PR metadata and keep `git ls-remote` as the remote SHA check.
-When `gh` CLI is unavailable, use the GitHub connector to create/update PR metadata, labels, comments, and per-PR compare state.
+When `gh` CLI is unavailable, use the GitHub connector to create/update PR metadata, labels, comments, per-PR compare state, and closure checks.
 After pushing to an existing PR branch, update the PR body with the new evidence packet, fetch the PR again, and verify the body does not still cite the branch's previous current-head SHA as live evidence.
 
 ## PR Body Template
@@ -73,12 +79,15 @@ After pushing to an existing PR branch, update the PR body with the new evidence
 - Open PR dependency matrix:
   - `#<n>`: dependency=`<independent|stacked|blocked|needs-rebase>`, reason=`<changed-files|head conflict|review hold>`, overlap=`<files|none>`, compare=`base=<base-sha> head=<head-sha> ahead=<n> behind=<n>`, status=`<ready|needs-rebase|blocked>`, source=`<source>`, mode=`<live-fetched|fixed>`.
 - Dependency decision: `<independent|stacked|blocked|needs-rebase>` for the target PR with summary reason and required follow-up.
+- Labels on PR at collection: `<label1>, <label2>` from `<source>`.
 - Conflict check: `<files>` overlap status.
 - Open PR relationship: `#<n>` is `<independent|stacked|blocked>` because `<changed-file comparison>`.
 - Rebase readiness action plan: `<action>` (for example: `rebase #<n> before update`, `hold update`, `update independent`).
 - Post-push self-refresh: pre-push checked_at=`<YYYY-MM-DDTHH:mm:ssZ>`, pre-push head=`<sha>`, post-push checked_at=`<YYYY-MM-DDTHH:mm:ssZ>`, post-push head=`<sha>`.
 - Post-push PR body refresh: branch pushed at `<new-head-sha>`, PR body updated at `<checked_at>`, refreshed PR body source `<connector|rest|ui>`.
 - PR body freshness verification: stale live-evidence tokens checked `<previous-current-head-sha|previous-checked_at>` with result `<no matches|historical-only matches with reason>`.
+- Branch cleanup and retention evidence: local branch `<deleted|retained>`, remote PR branch `<retained|deleted|not-created>`, remote retention reason, and timestamp.
+- Automation-memory sync evidence: memory artifact `<path>`, entry key `<run-id>`, and matching fact checks for `head`, `labels`, `local-branch-action`, `remote-branch-action`.
 
 ## Validation
 
@@ -93,6 +102,9 @@ After pushing to an existing PR branch, update the PR body with the new evidence
 - post-push head: `<sha>` (source: `<source>`, mode: `live-fetched`)
 - stale-body check: PR body no longer contains pre-push `checked_at` or pre-push current-head values as live evidence; PR body includes post-push `checked_at` and current head.
 - post-push refresh action: `<updated PR body via GitHub connector|updated PR body via gh|pending update>`
+- branch labels post-push: `<labels>` and label source `<connector|rest|ui>`.
+- post-push cleanup action: local branch `<deleted|retained>`, remote branch `<retained|deleted>`, closure status `<verified|not-verified>`.
+- memory sync: `<memory artifact>` updated with same labels/head/branch cleanup facts and `checked_at`.
 
 ## Cleanup
 
@@ -100,11 +112,23 @@ After pushing to an existing PR branch, update the PR body with the new evidence
 - Remote branch cleanup: `<retained|deleted|not-created>` with reason and merge/close condition.
 ```
 
+## Publication Closure (PR #10-specific)
+
+- PR #10 is self-referential and must prove post-push body alignment and closure state in the same evidence packet used for checks above.
+- PR #9 cleanup-actions are the precedent for local-vs-remote cleanup policy, while PR #10 remains an independent docs PR: local cleanup only after push+body refresh, remote PR branch retained while open draft.
+- Closure verification requires one captured set each for:
+  - post-push `checked_at` and `head`
+  - labels present at push time
+  - local branch action and remote branch action
+  - post-refresh stale-token check result
+  - automation memory sync with source-of-truth parity
+
 ## Current Example
 
 - PR #8 merged into `master` as `ccf7fbc333cbff231efad0cc7c92a0e09c37cec1`.
 - PR #9 is open as draft from `codex/express-direct-cleanup-scope` at `1a0db5475e7e89ea45da278deb05bd2d3342d372`.
 - PR #10 is open as draft from `codex/pr-evidence-growth-map-20260616`; because this checklist lives on that same PR branch, fetch the live PR head SHA before citing it.
+- On 2026-06-23, PR #10 pre-push head is `cbc5ee20550ae0be035d0e182baa82c607f192ea`; treat this as non-authoritative after push and re-fetch live head immediately.
 - PR #10 is self-referential to these docs; after any new push to branch `codex/pr-evidence-growth-map-20260616`, refresh and revalidate the PR body before claiming evidence freshness.
 - PR relationship snapshot at `2026-06-22T00:03:43Z`:
   - `#9`: state=`open`, head=`1a0db5475e7e89ea45da278deb05bd2d3342d372`, base=`ccf7fbc333cbff231efad0cc7c92a0e09c37cec1`, dependency=`independent`, overlap=`none`, compare=`ahead=1 behind=0`, status=`ready`, review state=`0 reviews, 0 inline comments, 0 issue comments`.
