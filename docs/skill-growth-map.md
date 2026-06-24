@@ -15,7 +15,7 @@ Last updated: 2026-06-24
 - On 2026-06-23, PR #10 pre-push head was `cbc5ee20550ae0be035d0e182baa82c607f192ea`; live fetch is still required after push.
 - GitHub's combined PR discussion fetch returned no reviews, inline comments, or issue comments for PR #8, PR #9, and PR #10 on 2026-06-22; PR #8, PR #9, and PR #10 also had empty review-thread connector results. The recommendations below therefore rely on PR subjects, PR bodies, diffs, validation notes, branch state, and repeated automation findings rather than reviewer comments.
 - The local automation environment currently has no `gh` CLI; publication must combine Git operations (`push`/branch handling) with GitHub connector PR metadata operations (create/update comments/labels).
-- On 2026-06-24, PR #9 remained open draft at `1a0db5475e7e89ea45da278deb05bd2d3342d372` and PR #10 remained open draft at `4f7455aa56eec5563d1ca80c3a536feadc9dc060`; connector comment fetches and review-thread fetches for both PRs returned empty arrays.
+- On 2026-06-24, PR #9 remained open draft at `1a0db5475e7e89ea45da278deb05bd2d3342d372` and PR #10 remained open draft on branch `codex/pr-evidence-growth-map-20260616`, whose current head must be live-fetched before citation; connector comment fetches and review-thread fetches for both PRs returned empty arrays.
 - On 2026-06-24, a GitHub PR list page rendered `0 Open / 7 Closed` and did not show PR #8-#10.
 - The GitHub PR API showed PR #9 and PR #10 as open drafts.
 - `git ls-remote` separately showed their remote branch heads and `origin/master` at PR #8's merge commit. Treat this as an evidence-surface mismatch to reconcile, not as a reason to trust the first surface checked.
