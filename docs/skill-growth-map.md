@@ -1,6 +1,6 @@
 # Skill Growth Map
 
-Last updated: 2026-06-23
+Last updated: 2026-06-24
 
 ## Evidence Base
 
@@ -15,6 +15,10 @@ Last updated: 2026-06-23
 - On 2026-06-23, PR #10 pre-push head was `cbc5ee20550ae0be035d0e182baa82c607f192ea`; live fetch is still required after push.
 - GitHub's combined PR discussion fetch returned no reviews, inline comments, or issue comments for PR #8, PR #9, and PR #10 on 2026-06-22; PR #8, PR #9, and PR #10 also had empty review-thread connector results. The recommendations below therefore rely on PR subjects, PR bodies, diffs, validation notes, branch state, and repeated automation findings rather than reviewer comments.
 - The local automation environment currently has no `gh` CLI; publication must combine Git operations (`push`/branch handling) with GitHub connector PR metadata operations (create/update comments/labels).
+- On 2026-06-24, PR #9 remained open draft at `1a0db5475e7e89ea45da278deb05bd2d3342d372` and PR #10 remained open draft at `4f7455aa56eec5563d1ca80c3a536feadc9dc060`; connector comment fetches and review-thread fetches for both PRs returned empty arrays.
+- On 2026-06-24, a GitHub PR list page rendered `0 Open / 7 Closed` and did not show PR #8-#10.
+- The GitHub PR API showed PR #9 and PR #10 as open drafts.
+- `git ls-remote` separately showed their remote branch heads and `origin/master` at PR #8's merge commit. Treat this as an evidence-surface mismatch to reconcile, not as a reason to trust the first surface checked.
 
 ## Recommended Growth Areas
 
@@ -212,6 +216,29 @@ Done when:
 - Remote PR branch is recorded as retained.
 - Automation memory entries match PR body for labels/head/cleanup state/sources.
 
+### 12. Evidence Surface Reconciliation
+
+Evidence:
+- On 2026-06-24, the GitHub PR list page rendered `0 Open / 7 Closed` and omitted PR #8-#10.
+- Connector reads returned PR #9 and PR #10 as open drafts.
+- `git ls-remote` separately showed their remote head branches.
+- Automation memory also contained prior #10 publication facts that were not present on `origin/master`, because those docs live only on the open PR #10 branch until merge.
+- PR #9 and PR #10 review/comment fetches returned empty arrays on 2026-06-24, so there are still no reviewer comments to interpret; the new learning comes from conflicting repository-state surfaces, not review feedback.
+
+Practice:
+- Before making a recommendation from "latest PRs", check at least three surfaces when they are available: GitHub connector PR payload, `git ls-remote` branch heads, and local `origin/*` refs after fetch.
+- If GitHub UI/search output disagrees with connector/API or Git data, record the disagreement in the evidence packet and choose the source that directly answers the claim:
+  - PR open/closed state: connector/API PR payload.
+  - Remote branch existence/head: `git ls-remote`.
+  - Local checkout state: `git status`, `git branch -vv`, and `git rev-parse`.
+  - Published doc availability on default branch: `origin/master` file tree, not the open PR branch.
+- For automation memory, classify each prior fact as `merged-current`, `open-pr-current`, or `historical-only` before reusing it in a PR body.
+- When a branch was created only as a temporary publication helper, delete it locally before final reporting and keep the remote PR branch only when an open draft still needs it.
+
+Done when:
+- A future run can explain why PR #10 docs exist on the PR branch but not on `origin/master`, why PR #9/#10 are still current despite a stale PR list page, and which command or connector result supports each claim.
+- The PR body and automation memory agree on two separate labels: memory facts use `merged-current`, `open-pr-current`, `historical-only`, or `superseded`, while live evidence values declare `live-fetched` or `fixed`.
+
 ## Next Concrete Drill
 
-Before the next PR update, execute the closure sequence for PR #10: push -> fetch live head with Git -> fetch labels with GitHub metadata -> PR-body rewrite -> re-fetch -> stale-check -> local cleanup -> automation-memory sync -> final readiness checks.
+Before the next PR update, execute the closure sequence for PR #10 and add evidence-surface reconciliation: push -> fetch live head with Git -> fetch labels with GitHub metadata -> PR-body rewrite -> re-fetch -> stale-check -> local cleanup -> automation-memory sync -> compare GitHub UI/API/Git surfaces -> final readiness checks.

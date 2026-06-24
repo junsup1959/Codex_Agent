@@ -18,6 +18,7 @@ Record these fields in the PR body or automation memory:
 | checked_at | UTC timestamp when this evidence packet was collected |
 | Default branch state | `git ls-remote origin refs/heads/master` or GitHub REST default-branch SHA |
 | Evidence source map | Per-item source for each claim (`git`, `git ls-remote`, GitHub connector payload, GitHub REST, GitHub UI) |
+| Evidence surface reconciliation | Differences between GitHub UI/search, connector/API PR payloads, `git ls-remote`, local `origin/*`, and automation memory |
 | Open PR dependency map | Per open PR: id, title, state, base/head SHA, base branch, reviewed state, and `independent|stacked|blocked` verdict |
 | Changed-file ownership proof | Full changed-file list per open PR and explicit overlap reason |
 | Open PR state | PR number, title, state, head branch, head SHA, labels |
@@ -63,6 +64,7 @@ git ls-remote origin refs/heads/<candidate-branch>
 When `git fetch` is blocked, use the GitHub connector or REST API for PR metadata and keep `git ls-remote` as the remote SHA check.
 When `gh` CLI is unavailable, use the GitHub connector to create/update PR metadata, labels, comments, per-PR compare state, and closure checks.
 After pushing to an existing PR branch, update the PR body with the new evidence packet, fetch the PR again, and verify the body does not still cite the branch's previous current-head SHA as live evidence.
+When GitHub UI/search, connector payloads, Git remote refs, local refs, or automation memory disagree, record the mismatch instead of silently choosing one source. Use connector/API PR payloads for PR state, `git ls-remote` for remote branch existence/head, local Git for checkout state, and default-branch file trees for merged-doc availability.
 
 ## PR Body Template
 
@@ -71,6 +73,7 @@ After pushing to an existing PR branch, update the PR body with the new evidence
 
 - checked_at: `<YYYY-MM-DDTHH:mm:ssZ>` (UTC), evidence-source: `<git|connector|rest|ui>`, freshness-trigger: `<before-open|before-update|before-push|before-merge-check>`, sha-date-mode: `<live-fetched|fixed>`.
 - Evidence source map: base=`<source>`, open-pr-state=`<source>`, review-state=`<source>`, conflict-check=`<source>`, validation=`<source>`.
+- Evidence surface reconciliation: UI/search=`<result>`, connector/API=`<result>`, git-remote=`<result>`, local-ref=`<result>`, automation-memory=`<result>`, chosen-source=`<source>`, reason=`<why this source answers the claim>`.
 - Base branch: `master` at `<sha>` (source: `<source>`, mode: `<live-fetched|fixed>`).
 - Open PRs checked: `#<n> <title>` at `<head-sha>`, state `<state>` (source: `<source>`, mode: `<live-fetched|fixed>`).
 - Head/base date notes: `<sha/date>` is `<live-fetched|fixed>` at `<checked_at>` because `<reason>`.
@@ -86,6 +89,7 @@ After pushing to an existing PR branch, update the PR body with the new evidence
 - Post-push self-refresh: pre-push checked_at=`<YYYY-MM-DDTHH:mm:ssZ>`, pre-push head=`<sha>`, post-push checked_at=`<YYYY-MM-DDTHH:mm:ssZ>`, post-push head=`<sha>`.
 - Post-push PR body refresh: branch pushed at `<new-head-sha>`, PR body updated at `<checked_at>`, refreshed PR body source `<connector|rest|ui>`.
 - PR body freshness verification: stale live-evidence tokens checked `<previous-current-head-sha|previous-checked_at>` with result `<no matches|historical-only matches with reason>`.
+- Memory fact classification: `<fact>` is `<merged-current|open-pr-current|historical-only|superseded>` with source `<source>`.
 - Branch cleanup and retention evidence: local branch `<deleted|retained>`, remote PR branch `<retained|deleted|not-created>`, remote retention reason, and timestamp.
 - Automation-memory sync evidence: memory artifact `<path>`, entry key `<run-id>`, and matching fact checks for `head`, `labels`, `local-branch-action`, `remote-branch-action`.
 
@@ -138,3 +142,6 @@ After pushing to an existing PR branch, update the PR body with the new evidence
 - Local environment has no `gh` CLI; use Git for code movement and the GitHub connector for PR metadata/labels/comments.
 - A follow-up that only updates PR #10's `docs/` files should update PR #10 instead of creating a duplicate PR, while PR #9 remains independent because it owns validator, test, and orchestration contract files.
 - After every push to PR #10's existing branch, refresh the PR body to the new head SHA and re-fetch it before reporting completion; otherwise the PR body can immediately become stale even when the branch update itself succeeded.
+- On 2026-06-24, the GitHub PR list page rendered `0 Open / 7 Closed` and omitted PR #8-#10.
+- Connector/API payloads showed PR #9 and PR #10 as open drafts.
+- `git ls-remote` separately showed their remote branch heads. Treat this as an evidence-surface reconciliation case: cite connector/API for PR state, cite `git ls-remote` for branch heads, and cite `origin/master` for default-branch file availability.
