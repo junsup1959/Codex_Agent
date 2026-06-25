@@ -33,6 +33,7 @@ Record these fields in the PR body or automation memory:
 | Branch cleanup evidence | Local branch action, remote branch action, and decision source |
 | Publication closure verification | Pre-push/post-push evidence comparison and stale-body check |
 | Automation-memory sync | Run evidence persisted in automation memory with matching label/branch/head facts |
+| Automation-memory fact expiration | Prior memory facts classified as `open-pr-current`, `merged-current`, `historical-only`, or `superseded`, with expiration trigger |
 | Post-push self-refresh evidence | For self-referential PR updates, pre-push and post-push `checked_at` plus PR `head` values |
 | Validation | Exact commands run and whether failures are functional or formatting-only |
 | Publication tooling | Whether `gh` CLI was available; if not, explicit Git+GitHub connector fallback used |
@@ -55,6 +56,7 @@ git push origin <candidate-branch>
 git fetch origin <candidate-branch> --prune
 git rev-parse origin/<candidate-branch>
 git log -n 1 --format="%H %aI" origin/<candidate-branch>
+git show --no-patch --format="%H %aI" HEAD
 git branch --list
 git branch -d <candidate-branch>
 git show --no-patch --pretty=fuller origin/<base-branch>..origin/<head-branch>
@@ -92,6 +94,7 @@ When GitHub UI/search, connector payloads, Git remote refs, local refs, or autom
 - Memory fact classification: `<fact>` is `<merged-current|open-pr-current|historical-only|superseded>` with source `<source>`.
 - Branch cleanup and retention evidence: local branch `<deleted|retained>`, remote PR branch `<retained|deleted|not-created>`, remote retention reason, and timestamp.
 - Automation-memory sync evidence: memory artifact `<path>`, entry key `<run-id>`, and matching fact checks for `head`, `labels`, `local-branch-action`, `remote-branch-action`.
+- Automation-memory fact expiration: prior memory facts `<fact-list>` are classified as `<open-pr-current|merged-current|historical-only|superseded>`, expiration trigger `<after-push|after-merge|after-close|after-rebase>`, refreshed source `<connector|git|git ls-remote>`.
 
 ## Validation
 
@@ -109,6 +112,7 @@ When GitHub UI/search, connector payloads, Git remote refs, local refs, or autom
 - branch labels post-push: `<labels>` and label source `<connector|rest|ui>`.
 - post-push cleanup action: local branch `<deleted|retained>`, remote branch `<retained|deleted>`, closure status `<verified|not-verified>`.
 - memory sync: `<memory artifact>` updated with same labels/head/branch cleanup facts and `checked_at`.
+- memory parity check: PR body and automation memory agree on current `head`, labels, local branch cleanup, remote branch retention, and expired prior-run facts.
 
 ## Cleanup
 
@@ -126,6 +130,7 @@ When GitHub UI/search, connector payloads, Git remote refs, local refs, or autom
   - local branch action and remote branch action
   - post-refresh stale-token check result
   - automation memory sync with source-of-truth parity
+  - prior memory fact classification and expiration trigger
 
 ## Current Example
 
@@ -145,3 +150,4 @@ When GitHub UI/search, connector payloads, Git remote refs, local refs, or autom
 - On 2026-06-24, the GitHub PR list page rendered `0 Open / 7 Closed` and omitted PR #8-#10.
 - Connector/API payloads showed PR #9 and PR #10 as open drafts.
 - `git ls-remote` separately showed their remote branch heads. Treat this as an evidence-surface reconciliation case: cite connector/API for PR state, cite `git ls-remote` for branch heads, and cite `origin/master` for default-branch file availability.
+- On 2026-06-25, the next PR #10 update should treat the 2026-06-24 automation memory entry as historical input until live connector/Git checks refresh its head, labels, and cleanup claims for the new push.

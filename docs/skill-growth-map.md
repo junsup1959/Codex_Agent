@@ -1,6 +1,6 @@
 # Skill Growth Map
 
-Last updated: 2026-06-24
+Last updated: 2026-06-25
 
 ## Evidence Base
 
@@ -19,6 +19,9 @@ Last updated: 2026-06-24
 - On 2026-06-24, a GitHub PR list page rendered `0 Open / 7 Closed` and did not show PR #8-#10.
 - The GitHub PR API showed PR #9 and PR #10 as open drafts.
 - `git ls-remote` separately showed their remote branch heads and `origin/master` at PR #8's merge commit. Treat this as an evidence-surface mismatch to reconcile, not as a reason to trust the first surface checked.
+- On 2026-06-25, PR #9 remained open draft at `1a0db5475e7e89ea45da278deb05bd2d3342d372`; PR #10 remained open draft on branch `codex/pr-evidence-growth-map-20260616` with pre-push head `952bba7d13f96224f5146f3a971aa2582b40f519`.
+- Connector review, combined comment, and review-thread reads for PR #9 and PR #10 returned empty arrays on 2026-06-25, so the next growth target is still based on PR topics, branch state, PR-body evidence, and repeated automation-memory freshness issues rather than reviewer prose.
+- The 2026-06-24 automation memory entry contains valid historical closure facts for the previous run, but those facts are not automatically current after the next PR #10 push. Treat automation memory as an input that must be reclassified before reuse, not as a live source of PR state.
 
 ## Recommended Growth Areas
 
@@ -232,13 +235,30 @@ Practice:
   - Remote branch existence/head: `git ls-remote`.
   - Local checkout state: `git status`, `git branch -vv`, and `git rev-parse`.
   - Published doc availability on default branch: `origin/master` file tree, not the open PR branch.
-- For automation memory, classify each prior fact as `merged-current`, `open-pr-current`, or `historical-only` before reusing it in a PR body.
+- For automation memory, classify each prior fact as `merged-current`, `open-pr-current`, `historical-only`, or `superseded` before reusing it in a PR body.
 - When a branch was created only as a temporary publication helper, delete it locally before final reporting and keep the remote PR branch only when an open draft still needs it.
 
 Done when:
 - A future run can explain why PR #10 docs exist on the PR branch but not on `origin/master`, why PR #9/#10 are still current despite a stale PR list page, and which command or connector result supports each claim.
 - The PR body and automation memory agree on two separate labels: memory facts use `merged-current`, `open-pr-current`, `historical-only`, or `superseded`, while live evidence values declare `live-fetched` or `fixed`.
 
+### 13. Automation Memory Fact Expiration
+
+Evidence:
+- The automation memory for 2026-06-24 correctly recorded PR #10's then-current head, labels, local branch cleanup, remote branch retention, and validation state.
+- PR #10 is self-referential and keeps moving on the same branch, so the same memory facts become stale immediately after a new push unless they are reclassified.
+- PR #10's body now needs to reconcile three kinds of evidence at once: live connector state, live Git remote state, and prior automation memory that may only describe the previous run.
+
+Practice:
+- Before reusing any automation memory line in a PR body, classify it as `open-pr-current`, `merged-current`, `historical-only`, or `superseded`.
+- Attach an expiration trigger to memory-derived live facts: `after-push`, `after-merge`, `after-close`, or `after-rebase`.
+- Only copy memory facts into PR body evidence when the current connector or Git check confirms them; otherwise cite the memory entry as historical context and replace current values with live-fetched values.
+- Add one explicit parity check after PR-body refresh: current PR head, labels, local branch action, and remote branch retention must match the latest automation memory entry written in this run.
+
+Done when:
+- A future run can explain which facts came from automation memory, which were refreshed live, and which old memory facts expired after the new push.
+- PR #10 body and automation memory no longer reuse previous-run head SHAs, `checked_at` values, or cleanup claims as live evidence without a fresh source.
+
 ## Next Concrete Drill
 
-Before the next PR update, execute the closure sequence for PR #10 and add evidence-surface reconciliation: push -> fetch live head with Git -> fetch labels with GitHub metadata -> PR-body rewrite -> re-fetch -> stale-check -> local cleanup -> automation-memory sync -> compare GitHub UI/API/Git surfaces -> final readiness checks.
+Before the next PR update, execute the closure sequence for PR #10 and add automation-memory expiration: push -> fetch live head with Git -> fetch labels with GitHub metadata -> classify prior memory facts -> PR-body rewrite -> re-fetch -> stale-check -> local cleanup -> automation-memory sync -> parity check between memory and PR body -> final readiness checks.
