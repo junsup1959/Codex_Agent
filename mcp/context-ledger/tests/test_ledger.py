@@ -529,6 +529,7 @@ class ContextLedgerTests(unittest.TestCase):
                 "direct_workflow_scope": {
                     "allowed_actions": ["normal implementation"],
                     "excluded_actions": ["specialist fanout"],
+                    "cleanup_actions": ["delete the local PR branch after publishing"],
                 },
                 "express_direct_reason": "Single-file direct fix does not need design/distribution fanout.",
                 "stage_pass_ref": "stage_pass:orchestrator:1",
@@ -547,6 +548,10 @@ class ContextLedgerTests(unittest.TestCase):
         self.assertEqual(result["next_stage"]["activation_ref"], None)
         self.assertEqual(result["next_stage"]["required_mcp_tools"], [])
         self.assertIn("normal direct workflow", result["next_stage"]["action"])
+        self.assertIn(
+            "cleanup_actions",
+            result["next_stage"]["stage_packet_template"]["orchestration_request"]["direct_workflow_scope"],
+        )
 
         invalid = validate_stage_packet(
             "orchestrator",
@@ -585,6 +590,26 @@ class ContextLedgerTests(unittest.TestCase):
         self.assertIn("express_direct.scope_shape", {item["code"] for item in missing_express_fields["errors"]})
         self.assertIn("express_direct.reason", {item["code"] for item in missing_express_fields["errors"]})
 
+        missing_cleanup_actions = validate_stage_packet(
+            "orchestrator",
+            {
+                **packet,
+                "orchestration_request": {
+                    **packet["orchestration_request"],
+                    "direct_workflow_scope": {
+                        "allowed_actions": ["normal implementation"],
+                        "excluded_actions": ["specialist fanout"],
+                    },
+                },
+            },
+            current_revision=0,
+        )
+        self.assertFalse(missing_cleanup_actions["valid"], missing_cleanup_actions)
+        self.assertIn(
+            "orchestration_request.direct_workflow_scope.cleanup_actions.missing",
+            {item["code"] for item in missing_cleanup_actions["errors"]},
+        )
+
         malformed_scope = validate_stage_packet(
             "orchestrator",
             {
@@ -594,6 +619,7 @@ class ContextLedgerTests(unittest.TestCase):
                     "direct_workflow_scope": {
                         "allowed_actions": ["normal implementation", ""],
                         "excluded_actions": [],
+                        "cleanup_actions": ["delete the local PR branch after publishing"],
                     },
                 },
             },
