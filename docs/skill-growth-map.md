@@ -1,10 +1,14 @@
 # Skill Growth Map
 
-Last updated: 2026-07-01
+Last updated: 2026-07-02
 
-- On 2026-06-26, PR #9 ("[codex] Require express direct cleanup scope") and PR #10 ("[codex] Document automation PR evidence checklist") were merged into `master`; both remote head branches remain visible from `git ls-remote` as `codex/express-direct-cleanup-scope` and `codex/pr-evidence-growth-map-20260616`.
+- On 2026-07-02, PR #9 and PR #10 head branches were retired after explicit merge-state and remote-head checks.
+  - `git push origin --delete codex/express-direct-cleanup-scope codex/pr-evidence-growth-map-20260616` was executed after both PRs were confirmed merged.
+  - `git ls-remote` was re-run afterward and returned only `codex/post-merge-branch-retirement-20260701` for `origin` PR-head scope.
+  - PR #11 remains open draft at branch `codex/post-merge-branch-retirement-20260701` (head `bf419563318156daf3ca3eb844ef0ba680da2e12`), so it is retained under the current open/draft guardrail.
+- On 2026-06-26, PR #9 ("[codex] Require express direct cleanup scope") and PR #10 ("[codex] Document automation PR evidence checklist") were merged into `master`; before the 2026-07-02 retirement action, both remote head branches were still visible from `git ls-remote` as `codex/express-direct-cleanup-scope` and `codex/pr-evidence-growth-map-20260616`.
   - Post-merge interpretation: treat remaining remote head branches as post-merge retirement evidence, not open-draft evidence.
-  - This run treats these as retention candidates and now tracks post-merge branch-retirement actions as growth debt.
+  - This run moved those retention candidates into completed post-merge branch-retirement evidence.
 
 ## Evidence Base
 
@@ -58,7 +62,7 @@ Done when:
 Evidence:
 - PR #8 and PR #9 both changed express-direct contracts; PR #9 is now merged, so its cleanup guidance has moved from open-PR retention to post-merge remote-head retirement.
 - Recent automation runs repeatedly needed to explain which source was authoritative: GitHub PR metadata, `git ls-remote`, local remote-tracking refs, or the checked-out branch.
-- PR #9's cleanup scope made branch cleanup a first-class concern, and the remaining remote head branch now requires explicit merged-PR retirement evidence before deletion.
+- PR #9's cleanup scope made branch cleanup a first-class concern, and the merged remote head branches required explicit retirement evidence before deletion.
 
 Practice:
 - Before opening a follow-up automation PR, produce a compact evidence packet with current open PRs, default-branch SHA, branch head SHA, review/comment counts, validation commands, and branch cleanup policy.
@@ -265,10 +269,10 @@ Done when:
 - A future run can explain which facts came from automation memory, which were refreshed live, and which old memory facts expired after the new push.
 - PR #10 body and automation memory no longer reuse previous-run head SHAs, `checked_at` values, or cleanup claims as live evidence without a fresh source.
 
-### 14. Post-Merge Remote PR Head Retirement (Growth Target)
+### 14. Post-Merge Remote PR Head Retirement
 
 Evidence:
-- On 2026-06-26, PR #9 and PR #10 were both merged, but `git ls-remote` still reports their remote branches (`codex/express-direct-cleanup-scope`, `codex/pr-evidence-growth-map-20260616`) and this run did not yet execute retirement.
+- On 2026-06-26, PR #9 and PR #10 were both merged, but `git ls-remote` still reported their remote branches (`codex/express-direct-cleanup-scope`, `codex/pr-evidence-growth-map-20260616`) before the 2026-07-02 retirement execution.
 - PR #9 established cleanup-action framing: local branch cleanup is controlled differently from remote PR-head lifecycle after publish.
 - PR #10's self-referential update work repeatedly required explicit local-vs-remote cleanup capture; that same mechanism now needs a merged-PR retirement branch for consistency.
 
@@ -288,6 +292,31 @@ Done when:
 - Merged PR closure runs include retirement evidence fields and never show a deleted remote branch for still-open PRs or draft PRs.
 - PR #9/#10 are no longer omitted from branch-retirement accounting after merge and their head-branch actions are explicitly recorded.
 
+### 15. Remote Branch Retirement Execution Audit
+
+Evidence:
+- On 2026-07-02, PR #9 (`codex/express-direct-cleanup-scope`) and PR #10 (`codex/pr-evidence-growth-map-20260616`) moved from `merged` state to retired remote head state in one execution sequence.
+- `checked_at` used for retirement evidence was `2026-07-02T00:05:00Z` (UTC).
+- PR #11 is currently open draft and therefore excluded from remote-head deletion by the current PR-state guardrail.
+
+Practice:
+- For each closed/merged automation PR with remaining `git ls-remote` head presence, run execution evidence in one bounded packet:
+  - classify PR lifecycle (`merged|closed|open`) from connector payload,
+  - capture pre-delete branch refs (`head_branch`, `head_sha_pre`, `pr_state`),
+  - run remote delete command and persist stdout/stderr,
+  - run post-delete `git ls-remote` confirmation and record `absent`/`present`,
+  - classify dependent open PRs and enforce open/draft retention.
+- Treat execution evidence as mandatory when remediation has already been documented as a growth target.
+- Keep PRs like #11 retained and explicitly logged as `open/draft->retained` to avoid false positives in cleanup completion claims.
+
+Done when:
+- Retired merged PRs have pre-delete refs, command output, and post-delete absence proof in the same PR body.
+- Current open or draft PR branches are explicitly logged as retained with source-of-truth evidence.
+
 ## Next Concrete Drill
 
-Before the next branch-cleanup update, execute the post-merge retirement sequence for PR #9/#10-style branches: fetch PR state from GitHub metadata -> verify merge/close state -> run `git ls-remote` for the remote head -> check dependent open PRs -> decide retain/delete -> capture pre/post remote-head evidence -> sync automation memory -> report whether any remote branch was intentionally retained.
+Before the next branch-cleanup update, execute one complete remote-branch retirement evidence packet:
+- capture current PR state for each merged/closed automation PR candidate,
+- log `checked_at`, `pre-delete branch refs`, deletion command output, and `post-delete ls-remote` status,
+- apply open/draft guardrail (`open/draft => retained`, merged+no-dependents => deleted),
+- and sync the exact memory fields for PR state, branch actions, command output, and evidence sources.

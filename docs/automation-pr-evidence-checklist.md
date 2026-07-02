@@ -31,6 +31,10 @@ Record these fields in the PR body or automation memory:
 | SHA/date capture mode | `live-fetched` for current values, `fixed` for intentional historical values with TTL/expiration rationale |
 | Publication labels | PR labels and verification source (`GitHub connector payload`) |
 | Branch cleanup evidence | Local branch action, remote branch action, and decision source |
+| Remote branch retirement pre-delete refs | PR state, head branch, and pre-delete head SHA before delete attempt |
+| Remote branch deletion command result | Exact delete command with stdout/stderr and exit status |
+| Post-delete remote-head verification | Post-delete `git ls-remote` result for the same head branch (`exists|absent`) |
+| Open/draft remote-branch guardrail | Explicit rule that open or draft PRs must keep remote heads retained |
 | Publication closure verification | Pre-push/post-push evidence comparison and stale-body check |
 | Automation-memory sync | Run evidence persisted in automation memory with matching label/branch/head facts |
 | Automation-memory fact expiration | Prior memory facts classified as `open-pr-current`, `merged-current`, `historical-only`, or `superseded`, with expiration trigger |
@@ -122,6 +126,7 @@ When GitHub UI/search, connector payloads, Git remote refs, local refs, or autom
 - post-push cleanup action: local branch `<deleted|retained>`, remote branch `<retained|deleted>`, closure status `<verified|not-verified>`.
 - memory sync: `<memory artifact>` updated with same labels/head/branch cleanup facts and `checked_at`.
 - memory parity check: PR body and automation memory agree on current `head`, labels, local branch cleanup, remote branch retention, and expired prior-run facts.
+- remote retirement execution evidence: `pre-delete checked_at` `<YYYY-MM-DDTHH:mm:ssZ>`, `pre-delete refs` `<pr# head_branch head_sha>`, `delete command` `<exact command and args>`, `delete output` `<exit code|stdout|stderr>`, `post-delete ls-remote` `<exists|absent>`, `guardrail result` `<open/draft->retained|merged->candidate|closed->candidate|merged/dependent->retained>`, `memory sync keys` `<checked_at|head|pre-delete refs|delete command result|post-delete presence|guardrail decision>`.
 
 ## Cleanup
 
@@ -145,8 +150,8 @@ When GitHub UI/search, connector payloads, Git remote refs, local refs, or autom
 ## Current Example
 
 - PR #8 merged into `master` as `ccf7fbc333cbff231efad0cc7c92a0e09c37cec1`.
-- PR #9 merged into `master` on 2026-06-26; remote head branch `codex/express-direct-cleanup-scope` was still present in `git ls-remote` after merge and required explicit retirement evidence before deletion.
-- PR #10 merged into `master` on 2026-06-26; remote head branch `codex/pr-evidence-growth-map-20260616` was still present in `git ls-remote` after merge and required explicit retirement evidence before deletion.
+- Historical (pre-delete): PR #9 merged into `master` on 2026-06-26; remote head branch `codex/express-direct-cleanup-scope` was still present in `git ls-remote` after merge and required explicit retirement evidence before deletion.
+- Historical (pre-delete): PR #10 merged into `master` on 2026-06-26; remote head branch `codex/pr-evidence-growth-map-20260616` was still present in `git ls-remote` after merge and required explicit retirement evidence before deletion.
 - Historical (pre-merge): PR #10 was open as draft from `codex/pr-evidence-growth-map-20260616`; because this checklist lived on that same PR branch, the live PR head SHA had to be fetched before citation.
 - On 2026-06-23, PR #10 pre-push head is `cbc5ee20550ae0be035d0e182baa82c607f192ea`; treat this as non-authoritative after push and re-fetch live head immediately.
 - Historical (pre-merge): PR #10 was self-referential to these docs; after any new push to branch `codex/pr-evidence-growth-map-20260616`, its PR body had to be refreshed and revalidated before claiming evidence freshness.
@@ -162,3 +167,13 @@ Historical PR-relationship snapshot at `2026-06-22T00:03:43Z`:
 - Connector/API payloads showed PR #9 and PR #10 as open drafts (historical; state later merged on 2026-06-26).
 - `git ls-remote` separately showed their remote branch heads. Treat this as an evidence-surface reconciliation case: cite connector/API for PR state, cite `git ls-remote` for branch heads, and cite `origin/master` for default-branch file availability.
 - Historical (pre-merge): on 2026-06-25, the next PR #10 update had to treat the 2026-06-24 automation memory entry as historical input until live connector/Git checks refreshed its head, labels, and cleanup claims for the new push.
+- On 2026-07-02 (`checked_at` `2026-07-02T00:05:00Z`), PR #11 is open draft at branch `codex/post-merge-branch-retirement-20260701` with head `bf419563318156daf3ca3eb844ef0ba680da2e12`; remote deletion was not executed for PR #11 because open/draft is retained.
+- On 2026-07-02, PR #9 retirement execution completed with pre/post checks:
+  - pre-delete refs: `codex/express-direct-cleanup-scope` at `1a0db5475e7e89ea45da278deb05bd2d3342d372` (state merged),
+  - command: `git push origin --delete codex/express-direct-cleanup-scope codex/pr-evidence-growth-map-20260616`,
+  - command result: `- [deleted] codex/express-direct-cleanup-scope` and `- [deleted] codex/pr-evidence-growth-map-20260616`,
+  - post-delete ls-remote: `codex/express-direct-cleanup-scope` absent, `codex/pr-evidence-growth-map-20260616` absent.
+- On 2026-07-02, PR #10 retirement execution completed with remote-post checks:
+  - pre-delete refs: `codex/pr-evidence-growth-map-20260616` at `a2b9e9eb22df56bfe691fb2156dc28f3f7e75120` (state merged),
+  - command: `git push origin --delete codex/express-direct-cleanup-scope codex/pr-evidence-growth-map-20260616`,
+  - post-delete ls-remote: only `codex/post-merge-branch-retirement-20260701` remains for this PR-head scope.
