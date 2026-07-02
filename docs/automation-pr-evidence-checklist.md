@@ -167,7 +167,7 @@ Historical PR-relationship snapshot at `2026-06-22T00:03:43Z`:
 - Connector/API payloads showed PR #9 and PR #10 as open drafts (historical; state later merged on 2026-06-26).
 - `git ls-remote` separately showed their remote branch heads. Treat this as an evidence-surface reconciliation case: cite connector/API for PR state, cite `git ls-remote` for branch heads, and cite `origin/master` for default-branch file availability.
 - Historical (pre-merge): on 2026-06-25, the next PR #10 update had to treat the 2026-06-24 automation memory entry as historical input until live connector/Git checks refreshed its head, labels, and cleanup claims for the new push.
-- On 2026-07-02 (`checked_at` `2026-07-02T00:05:00Z`), PR #11 is open draft at branch `codex/post-merge-branch-retirement-20260701` with head `bf419563318156daf3ca3eb844ef0ba680da2e12`; remote deletion was not executed for PR #11 because open/draft is retained.
+- On 2026-07-02 (`checked_at` `2026-07-02T00:05:00Z`), PR #11 was open draft at branch `codex/post-merge-branch-retirement-20260701`; its moving head must be live-fetched after each push, and remote deletion was not executed because open/draft is retained.
 - On 2026-07-02, PR #9 retirement execution completed with pre/post checks:
   - pre-delete refs: `codex/express-direct-cleanup-scope` at `1a0db5475e7e89ea45da278deb05bd2d3342d372` (state merged),
   - command: `git push origin --delete codex/express-direct-cleanup-scope codex/pr-evidence-growth-map-20260616`,

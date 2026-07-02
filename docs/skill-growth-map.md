@@ -5,7 +5,7 @@ Last updated: 2026-07-02
 - On 2026-07-02, PR #9 and PR #10 head branches were retired after explicit merge-state and remote-head checks.
   - `git push origin --delete codex/express-direct-cleanup-scope codex/pr-evidence-growth-map-20260616` was executed after both PRs were confirmed merged.
   - `git ls-remote` was re-run afterward and returned only `codex/post-merge-branch-retirement-20260701` for `origin` PR-head scope.
-  - PR #11 remains open draft at branch `codex/post-merge-branch-retirement-20260701` (head `bf419563318156daf3ca3eb844ef0ba680da2e12`), so it is retained under the current open/draft guardrail.
+  - PR #11 remains open draft at branch `codex/post-merge-branch-retirement-20260701`; fetch its live head after each push instead of storing a fixed current-head SHA, so it is retained under the current open/draft guardrail.
 - On 2026-06-26, PR #9 ("[codex] Require express direct cleanup scope") and PR #10 ("[codex] Document automation PR evidence checklist") were merged into `master`; before the 2026-07-02 retirement action, both remote head branches were still visible from `git ls-remote` as `codex/express-direct-cleanup-scope` and `codex/pr-evidence-growth-map-20260616`.
   - Post-merge interpretation: treat remaining remote head branches as post-merge retirement evidence, not open-draft evidence.
   - This run moved those retention candidates into completed post-merge branch-retirement evidence.
