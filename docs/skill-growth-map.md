@@ -1,7 +1,8 @@
 # Skill Growth Map
 
-Last updated: 2026-07-02
+Last updated: 2026-07-03
 
+- On 2026-07-03, PR #11 remained an open draft with no connector-returned comments, reviews, or review threads. The next growth target is final readback parity for same-PR updates: after pushing and updating an existing PR body, re-fetch the PR metadata and body, then compare `git ls-remote`, connector `head_sha`, PR-body live evidence, and automation memory before reporting closure.
 - On 2026-07-02, PR #9 and PR #10 head branches were retired after explicit merge-state and remote-head checks.
   - `git push origin --delete codex/express-direct-cleanup-scope codex/pr-evidence-growth-map-20260616` was executed after both PRs were confirmed merged.
   - `git ls-remote` was re-run afterward and returned only `codex/post-merge-branch-retirement-20260701` for `origin` PR-head scope.
@@ -32,6 +33,7 @@ Note: all explicit `open draft` status references below are historical unless ex
 - On 2026-06-25, PR #9 remained open draft at `1a0db5475e7e89ea45da278deb05bd2d3342d372`; PR #10 remained open draft on branch `codex/pr-evidence-growth-map-20260616` with pre-push head `952bba7d13f96224f5146f3a971aa2582b40f519`.
 - Connector review, combined comment, and review-thread reads for PR #9 and PR #10 returned empty arrays on 2026-06-25, so the next growth target is still based on PR topics, branch state, PR-body evidence, and repeated automation-memory freshness issues rather than reviewer prose.
 - The 2026-06-24 automation memory entry contains valid historical closure facts for the previous run, but those facts are not automatically current after the next PR #10 push. Treat automation memory as an input that must be reclassified before reuse, not as a live source of PR state.
+- On 2026-07-03, PR #11 (`[codex] Document post-merge branch retirement evidence`) was still open draft on branch `codex/post-merge-branch-retirement-20260701`; GitHub connector fetches returned empty arrays for PR comments, review submissions, and review threads. Because there is no reviewer prose, the recommendation is grounded in PR #11's prior stale-head fix, PR #9/#10 post-merge branch retirement, and the repeated same-PR evidence-refresh pattern.
 
 ## Recommended Growth Areas
 
@@ -313,10 +315,29 @@ Done when:
 - Retired merged PRs have pre-delete refs, command output, and post-delete absence proof in the same PR body.
 - Current open or draft PR branches are explicitly logged as retained with source-of-truth evidence.
 
+### 16. Same-PR Final Readback Parity
+
+Evidence:
+- PR #11 fixed stale current-head evidence after commit `1e4917be6e20ecaa0867b26ac5742bc57944809a` moved the branch while the PR body still cited an older live head.
+- PR #11 currently has no connector-returned comments, reviews, or review threads, so the practical review surface is the consistency between Git remote state, connector metadata, PR-body evidence, and automation memory.
+- PR #10 and PR #11 both updated their own evidence documents, which means the evidence packet can become stale after the final push or after the PR body rewrite itself.
+
+Practice:
+- After pushing a same-PR update, re-fetch the PR through the GitHub connector and record `head_sha`, labels, state/draft flag, and the body evidence block as the final readback source.
+- Compare four surfaces before reporting completion: `git ls-remote` for the branch head, connector `head_sha`, PR body `checked_at/head`, and the automation memory entry written during the same run.
+- Treat a mismatch as a closure failure, not a documentation nit. Either rewrite the PR body or append a corrected automation memory entry before deleting the local branch.
+- If the two live authorities (`git ls-remote` and connector `head_sha`) disagree after a second fetch, stop closure and record a source-surface blocker instead of changing only the PR body or memory.
+- Keep prior SHAs only under a `historical` or `pre-push` label; never let a previous live head remain in a current evidence block after final readback.
+
+Done when:
+- The final PR body readback, automation memory entry, and remote branch head agree on the current head, labels, state, local branch action, and remote branch action.
+- The final stale-token search covers both previous live heads and previous `checked_at` values before local branch cleanup.
+
 ## Next Concrete Drill
 
-Before the next branch-cleanup update, execute one complete remote-branch retirement evidence packet:
-- capture current PR state for each merged/closed automation PR candidate,
-- log `checked_at`, `pre-delete branch refs`, deletion command output, and `post-delete ls-remote` status,
-- apply open/draft guardrail (`open/draft => retained`, merged+no-dependents => deleted),
-- and sync the exact memory fields for PR state, branch actions, command output, and evidence sources.
+Before the next same-PR documentation update, execute one complete final-readback parity packet:
+- capture pre-push and post-push `checked_at`, branch head, and PR-body evidence,
+- re-fetch PR metadata/body after the PR body update,
+- compare `git ls-remote`, connector `head_sha`, PR body live fields, and automation memory,
+- run a stale-token search for previous live heads and previous `checked_at` values,
+- then delete only the local branch/worktree while retaining the remote branch for any still-open draft PR.
