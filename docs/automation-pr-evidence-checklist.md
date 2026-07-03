@@ -22,7 +22,8 @@ Record these fields in the PR body or automation memory:
 | Open PR dependency map | Per open PR: id, title, state, base/head SHA, base branch, reviewed state, and `independent|stacked|blocked` verdict |
 | Changed-file ownership proof | Full changed-file list per open PR and explicit overlap reason |
 | Open PR state | PR number, title, state, head branch, head SHA, labels |
-| Review state | Review, inline comments, and issue comments counts (or explicit empty arrays with source) |
+| Review state | Review, inline comments, issue comments, and review-thread counts (or explicit empty arrays with source) |
+| Review-thread state | GraphQL review-thread result, including resolved/unresolved counts or explicit empty array with source |
 | Compare readiness | Base/head SHA compare result, `ahead/behind` counts, and rebase status (`ready|needs-rebase|blocked`) |
 | Freshness trigger | Event that requires this evidence (`before-open`, `before-update`, `before-push`, `before-merge-check`) |
 | Dependency decision | Independent of open PRs, stacked on an open PR, blocked by an open PR, or requires rebase before update |
@@ -31,15 +32,24 @@ Record these fields in the PR body or automation memory:
 | SHA/date capture mode | `live-fetched` for current values, `fixed` for intentional historical values with TTL/expiration rationale |
 | Publication labels | PR labels and verification source (`GitHub connector payload`) |
 | Branch cleanup evidence | Local branch action, remote branch action, and decision source |
+| Remote branch retirement pre-delete refs | PR state, head branch, and pre-delete head SHA before delete attempt |
+| Remote branch deletion command result | Exact delete command with stdout/stderr and exit status |
+| Post-delete remote-head verification | Post-delete `git ls-remote` result for the same head branch (`exists|absent`) |
+| Open/draft remote-branch guardrail | Explicit rule that open or draft PRs must keep remote heads retained |
 | Publication closure verification | Pre-push/post-push evidence comparison and stale-body check |
 | Automation-memory sync | Run evidence persisted in automation memory with matching label/branch/head facts |
 | Automation-memory fact expiration | Prior memory facts classified as `open-pr-current`, `merged-current`, `historical-only`, or `superseded`, with expiration trigger |
 | Post-push self-refresh evidence | For self-referential PR updates, pre-push and post-push `checked_at` plus PR `head` values |
 | Validation | Exact commands run and whether failures are functional or formatting-only |
 | Publication tooling | Whether `gh` CLI was available; if not, explicit Git+GitHub connector fallback used |
+| Merged PR classification | `state`, `merged_at`, `closed_at`, and merge-source evidence source (`connector`/`rest`/`git`) |
 | Cleanup policy | Local branch action and remote PR head branch action with PR-state reason |
 | Post-push PR body refresh | After a branch push, whether the PR body was updated to the new head SHA/evidence packet and then re-fetched |
 | PR body freshness verification | Search result proving the PR body does not cite stale current-head SHA or stale `checked_at` values for live evidence |
+| Final PR readback | Re-fetched PR metadata/body after the PR body update, including `head_sha`, labels, state, draft flag, and evidence block |
+| Final parity gate | Comparison of `git ls-remote`, connector `head_sha`, PR body live fields, and automation memory after every mutation |
+| Remote head retirement classification | `pr_state` (`merged|closed|open`), `remote_head_exists` (`true|false` from `git ls-remote`), retirement eligibility (`allow_delete`), and dependent-open-PR check |
+| Remote deletion guardrail | explicit statement that remote branch deletion is forbidden while PR state is `open` or `draft` |
 
 ## Command Set
 
@@ -57,10 +67,15 @@ git fetch origin <candidate-branch> --prune
 git rev-parse origin/<candidate-branch>
 git log -n 1 --format="%H %aI" origin/<candidate-branch>
 git show --no-patch --format="%H %aI" HEAD
+git show --no-patch --format="%H %aI %s" HEAD
 git branch --list
 git branch -d <candidate-branch>
 git show --no-patch --pretty=fuller origin/<base-branch>..origin/<head-branch>
 git ls-remote origin refs/heads/<candidate-branch>
+git ls-remote --heads origin refs/heads/<candidate-branch>
+git rev-parse --verify origin/<candidate-branch>
+git push origin --delete <candidate-branch>
+git show --no-patch --format="%H %aI %s" origin/<candidate-branch>
 ```
 
 When `git fetch` is blocked, use the GitHub connector or REST API for PR metadata and keep `git ls-remote` as the remote SHA check.
@@ -79,7 +94,7 @@ When GitHub UI/search, connector payloads, Git remote refs, local refs, or autom
 - Base branch: `master` at `<sha>` (source: `<source>`, mode: `<live-fetched|fixed>`).
 - Open PRs checked: `#<n> <title>` at `<head-sha>`, state `<state>` (source: `<source>`, mode: `<live-fetched|fixed>`).
 - Head/base date notes: `<sha/date>` is `<live-fetched|fixed>` at `<checked_at>` because `<reason>`.
-- Review evidence: `<reviews>` reviews, `<inline-comments>` inline comments, `<issue-comments>` issue comments (source: `<source>`).
+- Review evidence: `<reviews>` reviews, `<inline-comments>` inline comments, `<issue-comments>` issue comments, `<review-threads>` review threads (source: `<source>`).
 - Tooling path: `<git|github-connector|both>`, `gh` availability `<yes|no>`, fallback `<N/A|connector metadata>`.
 - Open PR dependency matrix:
   - `#<n>`: dependency=`<independent|stacked|blocked|needs-rebase>`, reason=`<changed-files|head conflict|review hold>`, overlap=`<files|none>`, compare=`base=<base-sha> head=<head-sha> ahead=<n> behind=<n>`, status=`<ready|needs-rebase|blocked>`, source=`<source>`, mode=`<live-fetched|fixed>`.
@@ -91,10 +106,14 @@ When GitHub UI/search, connector payloads, Git remote refs, local refs, or autom
 - Post-push self-refresh: pre-push checked_at=`<YYYY-MM-DDTHH:mm:ssZ>`, pre-push head=`<sha>`, post-push checked_at=`<YYYY-MM-DDTHH:mm:ssZ>`, post-push head=`<sha>`.
 - Post-push PR body refresh: branch pushed at `<new-head-sha>`, PR body updated at `<checked_at>`, refreshed PR body source `<connector|rest|ui>`.
 - PR body freshness verification: stale live-evidence tokens checked `<previous-current-head-sha|previous-checked_at>` with result `<no matches|historical-only matches with reason>`.
+- Final PR readback: connector PR payload re-fetched at `<checked_at>`, state=`<open|closed>`, draft=`<true|false>`, head=`<sha>`, labels=`<labels>`, body evidence block=`<matches|mismatch>`.
+- Final parity gate: `git ls-remote` head=`<sha>`, connector head=`<sha>`, PR body head=`<sha>`, automation memory head=`<sha>`, decision=`<pass|rewrite-pr-body|append-memory-correction|block-live-source-mismatch>`.
 - Memory fact classification: `<fact>` is `<merged-current|open-pr-current|historical-only|superseded>` with source `<source>`.
 - Branch cleanup and retention evidence: local branch `<deleted|retained>`, remote PR branch `<retained|deleted|not-created>`, remote retention reason, and timestamp.
 - Automation-memory sync evidence: memory artifact `<path>`, entry key `<run-id>`, and matching fact checks for `head`, `labels`, `local-branch-action`, `remote-branch-action`.
 - Automation-memory fact expiration: prior memory facts `<fact-list>` are classified as `<open-pr-current|merged-current|historical-only|superseded>`, expiration trigger `<after-push|after-merge|after-close|after-rebase>`, refreshed source `<connector|git|git ls-remote>`.
+- Merged PR closure check: `state=<merged|closed|open>`, `pr_payload_state=<open|draft|closed|merged>`, `dependent_open_prs=<count or ids>`, dependent source `<connector|rest|git>`, and deletion-eligibility outcome.
+- Remote branch retirement evidence: `remote_head_exists_pre` (`exists|absent`), delete action result (`deleted|not-deleted`), `remote_head_exists_post` (`exists|absent`), dependent-open-PR check, and guardrail result (`open/draft delete forbidden|allowed`).
 
 ## Validation
 
@@ -113,17 +132,20 @@ When GitHub UI/search, connector payloads, Git remote refs, local refs, or autom
 - post-push cleanup action: local branch `<deleted|retained>`, remote branch `<retained|deleted>`, closure status `<verified|not-verified>`.
 - memory sync: `<memory artifact>` updated with same labels/head/branch cleanup facts and `checked_at`.
 - memory parity check: PR body and automation memory agree on current `head`, labels, local branch cleanup, remote branch retention, and expired prior-run facts.
+- final readback parity: PR metadata/body was re-fetched after the body update; `git ls-remote`, connector `head_sha`, PR body live fields, and automation memory agree, or live-source disagreement is recorded as a closure blocker after a second fetch.
+- remote retirement execution evidence: `pre-delete checked_at` `<YYYY-MM-DDTHH:mm:ssZ>`, `pre-delete refs` `<pr# head_branch head_sha>`, `delete command` `<exact command and args>`, `delete output` `<exit code|stdout|stderr>`, `post-delete ls-remote` `<exists|absent>`, `guardrail result` `<open/draft->retained|merged->candidate|closed->candidate|merged/dependent->retained>`, `memory sync keys` `<checked_at|head|pre-delete refs|delete command result|post-delete presence|guardrail decision>`.
 
 ## Cleanup
 
 - Local branch cleanup: `<deleted|retained>` with reason and timestamp.
 - Remote branch cleanup: `<retained|deleted|not-created>` with reason and merge/close condition.
+- Remote branch retirement guardrail: if PR is `open` or `draft`, remote action must be `retained`; if PR is `merged` and no dependents remain, action may be `deleted` (with recorded command output).
 ```
 
-## Publication Closure (PR #10-specific)
+## Historical Publication Closure (PR #10-specific)
 
-- PR #10 is self-referential and must prove post-push body alignment and closure state in the same evidence packet used for checks above.
-- PR #9 cleanup-actions are the precedent for local-vs-remote cleanup policy, while PR #10 remains an independent docs PR: local cleanup only after push+body refresh, remote PR branch retained while open draft.
+- Historical (pre-merge): PR #10 was self-referential and had to prove post-push body alignment and closure state in the same evidence packet used for checks above.
+- Historical (pre-merge): PR #9 cleanup-actions are the precedent for local-vs-remote cleanup policy; PR #10 remained an independent docs PR during draft, so remote PR branch retention applied while it was open draft.
 - Closure verification requires one captured set each for:
   - post-push `checked_at` and `head`
   - labels present at push time
@@ -135,19 +157,31 @@ When GitHub UI/search, connector payloads, Git remote refs, local refs, or autom
 ## Current Example
 
 - PR #8 merged into `master` as `ccf7fbc333cbff231efad0cc7c92a0e09c37cec1`.
-- PR #9 is open as draft from `codex/express-direct-cleanup-scope` at `1a0db5475e7e89ea45da278deb05bd2d3342d372`.
-- PR #10 is open as draft from `codex/pr-evidence-growth-map-20260616`; because this checklist lives on that same PR branch, fetch the live PR head SHA before citing it.
+- Historical (pre-delete): PR #9 merged into `master` on 2026-06-26; remote head branch `codex/express-direct-cleanup-scope` was still present in `git ls-remote` after merge and required explicit retirement evidence before deletion.
+- Historical (pre-delete): PR #10 merged into `master` on 2026-06-26; remote head branch `codex/pr-evidence-growth-map-20260616` was still present in `git ls-remote` after merge and required explicit retirement evidence before deletion.
+- Historical (pre-merge): PR #10 was open as draft from `codex/pr-evidence-growth-map-20260616`; because this checklist lived on that same PR branch, the live PR head SHA had to be fetched before citation.
 - On 2026-06-23, PR #10 pre-push head is `cbc5ee20550ae0be035d0e182baa82c607f192ea`; treat this as non-authoritative after push and re-fetch live head immediately.
-- PR #10 is self-referential to these docs; after any new push to branch `codex/pr-evidence-growth-map-20260616`, refresh and revalidate the PR body before claiming evidence freshness.
-- PR relationship snapshot at `2026-06-22T00:03:43Z`:
+- Historical (pre-merge): PR #10 was self-referential to these docs; after any new push to branch `codex/pr-evidence-growth-map-20260616`, its PR body had to be refreshed and revalidated before claiming evidence freshness.
+Historical PR-relationship snapshot at `2026-06-22T00:03:43Z`:
   - `#9`: state=`open`, head=`1a0db5475e7e89ea45da278deb05bd2d3342d372`, base=`ccf7fbc333cbff231efad0cc7c92a0e09c37cec1`, dependency=`independent`, overlap=`none`, compare=`ahead=1 behind=0`, status=`ready`, review state=`0 reviews, 0 inline comments, 0 issue comments`.
-  - `#10` is the current target PR and is not included in the open-PR dependency matrix by definition. review state for current target: `0 reviews, 0 inline comments, 0 issue comments`.
+  - `#10` was the current target PR and was not included in the open-PR dependency matrix by definition. review state for that target: `0 reviews, 0 inline comments, 0 issue comments`.
 - GitHub's combined PR discussion fetch returned no reviews, no inline comments, and no issue comments for PR #8, PR #9, and PR #10 on 2026-06-22 (live-fetched); PR #8, PR #9, and PR #10 also had empty review-thread connector results.
-- PR #9 and PR #10 are independent by changed-file ownership, but both target `master` `ccf7fbc333cbff231efad0cc7c92a0e09c37cec1`; rebase/conflict readiness must still be checked before publication updates.
+- Historical (pre-merge): PR #9 and PR #10 were independent by changed-file ownership, but both targeted `master` `ccf7fbc333cbff231efad0cc7c92a0e09c37cec1`; rebase/conflict readiness had to be checked before publication updates.
 - Local environment has no `gh` CLI; use Git for code movement and the GitHub connector for PR metadata/labels/comments.
-- A follow-up that only updates PR #10's `docs/` files should update PR #10 instead of creating a duplicate PR, while PR #9 remains independent because it owns validator, test, and orchestration contract files.
-- After every push to PR #10's existing branch, refresh the PR body to the new head SHA and re-fetch it before reporting completion; otherwise the PR body can immediately become stale even when the branch update itself succeeded.
+- Historical (pre-merge): a follow-up that only updated PR #10's `docs/` files had to update PR #10 instead of creating a duplicate PR, while PR #9 remained independent because it owned validator, test, and orchestration contract files.
+- Historical (pre-merge): after every push to PR #10's existing branch, the PR body had to be refreshed to the new head SHA and re-fetched before reporting completion; otherwise the PR body could immediately become stale even when the branch update itself succeeded.
 - On 2026-06-24, the GitHub PR list page rendered `0 Open / 7 Closed` and omitted PR #8-#10.
-- Connector/API payloads showed PR #9 and PR #10 as open drafts.
+- Connector/API payloads showed PR #9 and PR #10 as open drafts (historical; state later merged on 2026-06-26).
 - `git ls-remote` separately showed their remote branch heads. Treat this as an evidence-surface reconciliation case: cite connector/API for PR state, cite `git ls-remote` for branch heads, and cite `origin/master` for default-branch file availability.
-- On 2026-06-25, the next PR #10 update should treat the 2026-06-24 automation memory entry as historical input until live connector/Git checks refresh its head, labels, and cleanup claims for the new push.
+- Historical (pre-merge): on 2026-06-25, the next PR #10 update had to treat the 2026-06-24 automation memory entry as historical input until live connector/Git checks refreshed its head, labels, and cleanup claims for the new push.
+- On 2026-07-02 (`checked_at` `2026-07-02T00:05:00Z`), PR #11 was open draft at branch `codex/post-merge-branch-retirement-20260701`; its moving head must be live-fetched after each push, and remote deletion was not executed because open/draft is retained.
+- On 2026-07-03, PR #11 remained open draft and connector reads returned no comments, reviews, or review threads. For any further update to that same branch, treat the prior PR body head as pre-push evidence until final PR readback proves the connector `head_sha`, PR body evidence, `git ls-remote`, and automation memory agree.
+- On 2026-07-02, PR #9 retirement execution completed with pre/post checks:
+  - pre-delete refs: `codex/express-direct-cleanup-scope` at `1a0db5475e7e89ea45da278deb05bd2d3342d372` (state merged),
+  - command: `git push origin --delete codex/express-direct-cleanup-scope codex/pr-evidence-growth-map-20260616`,
+  - command result: `- [deleted] codex/express-direct-cleanup-scope` and `- [deleted] codex/pr-evidence-growth-map-20260616`,
+  - post-delete ls-remote: `codex/express-direct-cleanup-scope` absent, `codex/pr-evidence-growth-map-20260616` absent.
+- On 2026-07-02, PR #10 retirement execution completed with remote-post checks:
+  - pre-delete refs: `codex/pr-evidence-growth-map-20260616` at `a2b9e9eb22df56bfe691fb2156dc28f3f7e75120` (state merged),
+  - command: `git push origin --delete codex/express-direct-cleanup-scope codex/pr-evidence-growth-map-20260616`,
+  - post-delete ls-remote: only `codex/post-merge-branch-retirement-20260701` remains for this PR-head scope.
